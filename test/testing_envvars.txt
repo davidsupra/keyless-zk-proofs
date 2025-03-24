@@ -1,0 +1,5 @@
+
+ONCHAIN_GROTH16_VK_URL=http://mock-on-chain:4444/groth16_vk.json
+ONCHAIN_TW_VK_URL=http://mock-on-chain:4444/keyless_config.json
+PRIVATE_KEY_0=0x8c75cacb54de1af0bd7b6c0549548b8d39a8177320f46ca5f767e5ed603dc08b
+PRIVATE_KEY_1=0x6bf4bd737ac8cc87841b5e83d396ff4e9197b014b7b395434d09c5828cca0e1d

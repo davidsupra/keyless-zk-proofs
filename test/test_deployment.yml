@@ -1,0 +1,20 @@
+services:
+  mock-on-chain:
+    build: 
+      context: ..
+      dockerfile: ./test/mock-on-chain/Dockerfile
+    expose:
+      - 4444
+
+  prover-service:
+    image: prover-service
+    links:
+      - mock-on-chain
+    ports: 
+      - 8080:8080
+    volumes:
+      - ./prover-service:/testing-context
+    env_file:
+      - ./testing_envvars.txt
+    depends_on:
+      - mock-on-chain
