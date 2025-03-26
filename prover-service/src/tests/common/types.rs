@@ -88,6 +88,7 @@ pub trait TestJWKKeyPair {
     fn sign(&self, payload: &impl Serialize) -> String;
     #[allow(clippy::all)]
     fn into_rsa_jwk(&self) -> RSA_JWK;
+    fn to_json(&self) -> Result<String, serde_json::Error>;
 }
 
 pub struct DefaultTestJWKKeyPair {
@@ -137,6 +138,10 @@ impl TestJWKKeyPair for DefaultTestJWKKeyPair {
 
     fn into_rsa_jwk(&self) -> RSA_JWK {
         RSA_JWK::new_256_aqab(&self.kid, &self.pubkey_mod_b64())
+    }
+
+    fn to_json(&self) -> Result<String, serde_json::Error>  {
+        serde_json::to_string(&self.into_rsa_jwk())
     }
 }
 

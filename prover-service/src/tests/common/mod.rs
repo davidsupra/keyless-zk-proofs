@@ -91,12 +91,12 @@ pub fn gen_test_jwk_keypair_with_kid_override(kid: &str) -> impl TestJWKKeyPair 
     .unwrap()
 }
 
-pub fn gen_test_training_wheels_keypair() -> (Ed25519PrivateKey, Ed25519PublicKey) {
+pub fn gen_test_training_wheels_keypair() -> TrainingWheelsKeyPair {
     let mut csprng: ThreadRng = thread_rng();
 
     let priv_key = Ed25519PrivateKey::generate(&mut csprng);
-    let pub_key: Ed25519PublicKey = (&priv_key).into();
-    (priv_key, pub_key)
+
+    TrainingWheelsKeyPair::from_sk(priv_key)
 }
 
 pub fn get_test_pepper() -> Pepper {
@@ -114,8 +114,9 @@ pub async fn convert_prove_and_verify(
     testcase: &ProofTestCase<impl Serialize + WithNonce + Clone>,
 ) -> Result<(), anyhow::Error> {
     let jwk_keypair = gen_test_jwk_keypair();
-    let (tw_sk_default, _) = gen_test_training_wheels_keypair();
-    let (tw_sk_new, tw_pk_new) = gen_test_training_wheels_keypair();
+    let tw_keypair_default = gen_test_training_wheels_keypair();
+    let tw_keypair_new = gen_test_training_wheels_keypair();
+    let tw_vk_new = tw_keypair_new.verification_key.clone();
     let prover_server_config = get_config();
 
     let new_vk = if prover_server_config.new_setup_dir.is_some() {
@@ -129,9 +130,7 @@ pub async fn convert_prove_and_verify(
 
     // Fill external resource caches.
     ON_CHAIN_GROTH16_VK.write().unwrap().clone_from(&new_vk);
-    *ON_CHAIN_KEYLESS_CONFIG.write().unwrap() = Some(OnChainKeylessConfiguration::from_tw_pk(
-        Some(tw_pk_new.clone()),
-    ));
+    *ON_CHAIN_KEYLESS_CONFIG.write().unwrap() = Some(tw_keypair_new.on_chain_repr.clone());
 
     DECODING_KEY_CACHE.insert(String::from("test.oidc.provider"), dm);
 
@@ -140,13 +139,13 @@ pub async fn convert_prove_and_verify(
         default_setup: SetupSpecificState {
             config: get_test_circuit_config(),
             groth16_vk: prover_server_config.load_vk(false),
-            tw_keys: TrainingWheelsKeyPair::from_sk(tw_sk_default),
+            tw_keys: tw_keypair_default,
             full_prover: Mutex::new(init_test_full_prover(false)),
         },
         new_setup: Some(SetupSpecificState {
             config: get_test_circuit_config(),
             groth16_vk: new_vk.unwrap(),
-            tw_keys: TrainingWheelsKeyPair::from_sk(tw_sk_new),
+            tw_keys: tw_keypair_new,
             full_prover: Mutex::new(init_test_full_prover(true)),
         }),
     };
@@ -176,7 +175,7 @@ pub async fn convert_prove_and_verify(
         } => {
             let g16vk = prepared_vk(&prover_server_config.verification_key_path(true));
             proof.verify_proof(public_inputs_hash.as_fr(), &g16vk)?;
-            training_wheels::verify(&response, &tw_pk_new)
+            training_wheels::verify(&response, &tw_vk_new)
         }
         ProverServiceResponse::Error { message } => {
             panic!("returned ProverServiceResponse::Error: {}", message)
