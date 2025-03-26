@@ -3,7 +3,7 @@
 use super::{types::Input, JwtHeader, JwtPayload};
 use crate::{api::RequestInput, jwk_fetching};
 use anyhow::Context;
-use aptos_keyless_common::input_processing::encoding::{AsFr as _, FromB64 as _, JwtParts};
+use keyless_common::input_processing::encoding::{AsFr as _, FromB64 as _, JwtParts};
 use aptos_types::jwks::rsa::RSA_JWK;
 use std::sync::Arc;
 use tracing::debug;

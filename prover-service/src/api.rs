@@ -2,7 +2,7 @@
 
 use aptos_crypto_derive::BCSCryptoHash;
 use aptos_crypto_derive::CryptoHasher;
-use aptos_keyless_common::PoseidonHash;
+use keyless_common::PoseidonHash;
 use aptos_types::{
     keyless::{Groth16Proof, Pepper},
     transaction::authenticator::EphemeralPublicKey,

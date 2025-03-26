@@ -3,7 +3,7 @@
 use super::{field_parser::ParsedField, types::Input};
 use crate::input_processing::field_parser::FieldParser;
 use anyhow::{bail, Result};
-use aptos_keyless_common::input_processing::circuit_input_signals::{
+use keyless_common::input_processing::circuit_input_signals::{
     CircuitInputSignals, Unpadded,
 };
 

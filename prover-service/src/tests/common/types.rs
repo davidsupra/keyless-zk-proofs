@@ -8,7 +8,7 @@ use crate::{
     input_processing::rsa::RsaPrivateKey,
     training_wheels::verification_logic::compute_nonce,
 };
-use aptos_keyless_common::input_processing::{config::CircuitConfig, encoding::FromFr};
+use keyless_common::input_processing::{config::CircuitConfig, encoding::FromFr};
 use aptos_types::{
     jwks::rsa::RSA_JWK, keyless::Pepper, transaction::authenticator::EphemeralPublicKey,
 };

@@ -2,7 +2,7 @@
 
 use crate::{api::RequestInput, config::OidcProvider};
 use anyhow::{anyhow, Result};
-use aptos_keyless_common::input_processing::encoding::{FromB64, JwtHeader, JwtParts, JwtPayload};
+use keyless_common::input_processing::encoding::{FromB64, JwtHeader, JwtParts, JwtPayload};
 use aptos_types::jwks::rsa::RSA_JWK;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;

@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 
-members = ["circuit", "keyless-common", "prover-service", "vk-diff", "rust-rapidsnark"]
 
 [workspace.package]
 authors = ["Aptos Labs <opensource@aptoslabs.com>"]
@@ -23,7 +22,7 @@ overflow-checks = true
 anyhow = "1.0.79"
 aptos-crypto = { git = "https://github.com/aptos-labs/aptos-core", branch = "main", package = "aptos-crypto" }
 aptos-crypto-derive = { git = "https://github.com/aptos-labs/aptos-core", branch = "main", package = "aptos-crypto-derive" }
-aptos-keyless-common = { path = "keyless-common" }
+keyless-common = { path = "keyless-common" }
 aptos-keyless-pepper-common = { path = "keyless/pepper/common" }
 aptos-keyless-pepper-service = { path = "keyless/pepper/service" }
 aptos-logger = { git = "https://github.com/aptos-labs/aptos-core" }

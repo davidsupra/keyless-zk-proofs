@@ -16,7 +16,7 @@ use aptos_crypto::{
     encoding_type::EncodingType,
     Uniform,
 };
-use aptos_keyless_common::input_processing::{config::CircuitConfig, encoding::AsFr};
+use keyless_common::input_processing::{config::CircuitConfig, encoding::AsFr};
 use aptos_types::{
     jwks::rsa::RSA_JWK, keyless::Pepper, transaction::authenticator::EphemeralPublicKey,
 };
