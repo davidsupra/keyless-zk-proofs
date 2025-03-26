@@ -22,21 +22,22 @@ TESTING_SETUPS_DIR=utils.resources_dir_root() / "testing_setups"
 
 
 def repo_circuit_checksum():
-    return utils.directory_checksum(utils.repo_root() / "circuit/templates")
+    return utils.directory_checksum(utils.repo_root() / "circuit/templates", ".circom")
 
 def repo_circuit_setup_path():
     return TESTING_SETUPS_DIR / repo_circuit_checksum()
 
 def require_ptau_file():
     if PTAU_PATH.is_file():
-        eprint("Powers-of-tau file found, skipping download.")
+        eprint("Powers-of-tau file found at " + str(PTAU_PATH) + ", skipping download.")
     else:
-        eprint("Downloading powers-of-tau file...")
+        eprint("Downloading powers-of-tau file... (destination: " + str(PTAU_PATH) + ")")
         utils.download_file(PTAU_URL, PTAU_PATH)
+        eprint("Finished downloading to " + str(PTAU_PATH) + ".")
 
     eprint("Checking sha256sum of ptau file...")
     if utils.file_checksum(PTAU_PATH) != PTAU_CHECKSUM:
-        eprint("WARNING: ptau file doesn't match expected sha256sum. Aborting.")
+        eprint("WARNING: ptau file at " + str(PTAU_PATH) + " doesn't match expected sha256sum. Aborting.")
         exit(2)
 
 class TestingSetup(setups.Setup):
@@ -54,7 +55,7 @@ class TestingSetup(setups.Setup):
         shutil.copytree(utils.repo_root() / "circuit/templates", "./", dirs_exist_ok=True)
         utils.manage_deps.add_cargo_to_path()
         start_time = time.time()
-        utils.run_shell_command('circom -l . -l $(npm root -g) main.circom --r1cs --wasm --c --sym')
+        utils.run_shell_command('circom -l . -l $(. ~/.nvm/nvm.sh; npm root -g) main.circom --r1cs --wasm --c --sym')
         eprint("Compilation took %s seconds" % (time.time() - start_time))
 
 
@@ -105,7 +106,7 @@ class TestingSetup(setups.Setup):
                 self.c_witness_gen_from_scratch()
         else:
             if not ignore_cache and cache.download_blob_if_present(self.checksum(), TESTING_SETUPS_DIR) and self.is_complete():
-                if platform.machine() == 'x86_64' and not repo_circuit_setup.witness_gen_c():
+                if platform.machine() == 'x86_64' and not self.witness_gen_c():
                     self.c_witness_gen_from_scratch()
             else:
                 eprint("Deleting old testing setups...")
