@@ -38,7 +38,7 @@ fn ceremony_vk_path(release_tag: &str) -> String {
 
 fn circuit_config_path(release_tag: &str) -> String {
     shellexpand::tilde(
-            &format!("~/.local/share/aptos-kelyess/ceremonies/{}/circuit_config.yml", release_tag)
+            &format!("~/.local/share/aptos-keyless/ceremonies/{}/circuit_config.yml", release_tag)
     ).to_string()
 }
 
@@ -88,10 +88,16 @@ fn main() {
 
     if command == "prepare-test" {
 
+        std::fs::create_dir_all("./test-staging").unwrap();
+        std::env::set_current_dir("./test-staging").unwrap();
+
         let release_tag = std::env::args().nth(2).expect("no path given");
+        println!("Using release tag {}.", release_tag);
+
         let mut envvars = vec![];
         envvars.push("CONFIG_FILE=\"config_docker_test.yml\"".to_string());
 
+        println!("Circuit config path {}.", circuit_config_path(&release_tag));
         fs::copy(&circuit_config_path(&release_tag), "circuit_config.yml").unwrap();
 
         if ! ceremony_dir_exists(&release_tag) {
@@ -129,6 +135,8 @@ fn main() {
         fs::write("envvars.env", envvars.join("\n")).unwrap();
 
     } else if command == "request" {
+
+        std::env::set_current_dir("./test-staging").unwrap();
 
         let url = std::env::args().nth(2).expect("no url given");
 

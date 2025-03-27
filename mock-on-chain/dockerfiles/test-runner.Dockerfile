@@ -6,6 +6,7 @@ ARG TARGETARCH
 
 COPY --link . .
 
+ENV RESOURCES_DIR=/resources
 RUN ./scripts/task.sh prover-service install-deps
 RUN /root/.cargo/bin/cargo build
     

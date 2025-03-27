@@ -3,10 +3,10 @@
 FROM archlinux:base-devel 
 ARG TARGETARCH
 
-COPY --link . .
+COPY --link ./test-staging .
 EXPOSE 4444
 
 RUN pacman -Syy && \
     pacman -S --noconfirm python
 
-CMD ["./dockerfiles/mock-on-chain-run.sh"]
+CMD python3 -m http.server 4444

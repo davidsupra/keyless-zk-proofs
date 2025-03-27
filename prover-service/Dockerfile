@@ -3,6 +3,8 @@
 # The image used for building
 FROM debian:bookworm as build_prover_service
 ARG TARGETARCH
+ARG RELEASE_DEFAULT
+ARG RELEASE_NEW
 
 # copy the entire cargo workspace into the image
 COPY --link . .
@@ -17,8 +19,8 @@ RUN /root/.cargo/bin/cargo build --release -p prover-service \
 # Download trusted setup and witness gen binaries
 ENV RESOURCES_DIR=/resources
 RUN ./scripts/task.sh setup download-ceremonies-for-releases \
-        "test_releases/test-ceremony-20250224"               \
-        "test_releases/test-ceremony-20250224"               \
+        "$RELEASE_DEFAULT"                                   \
+        "$RELEASE_NEW"                                       \
         --witness-gen-type "c"
 
 
