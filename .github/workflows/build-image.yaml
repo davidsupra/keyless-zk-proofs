@@ -61,4 +61,4 @@ jobs:
 
       - run: ./scripts/task.sh prover-service install-deps
       - run: ./scripts/task.sh setup download-ceremonies-for-releases "test_releases/test-ceremony-20250224" "test_releases/test-ceremony-20250224"
-      - run: ./scripts/task.sh prover-service test-docker-image "test_releases/test-ceremony-20250224"
+      - run: source ~/.bashrc; ./scripts/task.sh prover-service test-docker-image "test_releases/test-ceremony-20250224"
