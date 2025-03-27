@@ -1,7 +1,7 @@
 %YAML 1.2
 ---
 
-resources_dir: "/resources/ceremonies"
+resources_dir: "/resources/current_setups"
 default_setup_dir: "default"
 #new_setup_dir: "new"
 

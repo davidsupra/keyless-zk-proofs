@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::Command;
 
 use aptos_crypto::ed25519::Ed25519PublicKey;
+use aptos_types::jwks::rsa::RSA_JWK;
 use prover_service::api::ProverServiceResponse;
 use prover_service::groth16_vk::SnarkJsGroth16VerificationKey;
 use prover_service::tests::common;
@@ -12,7 +13,13 @@ use prover_service::tests::common::types::{DefaultTestJWKKeyPair, ProofTestCase,
 use aptos_crypto::ValidCryptoMaterialStringExt;
 use prover_service::training_wheels;
 use keyless_common::input_processing::{config::CircuitConfig, encoding::AsFr};
+use serde::Serialize;
 
+
+#[derive(Serialize)]
+struct JwkKeys {
+    keys: Vec<RSA_JWK>,
+}
 
 fn ceremony_dir_exists(release_tag: &str) -> bool {
 
@@ -27,6 +34,19 @@ fn ceremony_vk_path(release_tag: &str) -> String {
     shellexpand::tilde(
         &format!("~/.local/share/aptos-keyless/ceremonies/{}/verification_key.json", release_tag)
     ).to_string()
+}
+
+fn circuit_config_path(release_tag: &str) -> String {
+    shellexpand::tilde(
+            &format!("~/.local/share/aptos-kelyess/ceremonies/{}/circuit_config.yml", release_tag)
+    ).to_string()
+}
+
+fn get_circuit_config() -> CircuitConfig {
+    serde_yaml::from_str(&fs::read_to_string(
+            "circuit_config.yml"
+            ).expect("Unable to read file"))
+        .expect("should parse correctly")
 }
 
 fn main() {
@@ -72,6 +92,8 @@ fn main() {
         let mut envvars = vec![];
         envvars.push("CONFIG_FILE=\"config_docker_test.yml\"".to_string());
 
+        fs::copy(&circuit_config_path(&release_tag), "circuit_config.yml").unwrap();
+
         if ! ceremony_dir_exists(&release_tag) {
             Command::new("../scripts/task.sh")
                 .args(["setup", "download-ceremonies-for-releases", &release_tag, &release_tag])
@@ -99,13 +121,16 @@ fn main() {
 
         // JWK keypair
         let jwk_keypair = prover_service::tests::common::gen_test_jwk_keypair();
-        let jwk_json = serde_json::to_string(&jwk_keypair.into_rsa_jwk()).unwrap();
-        fs::write("jwk.json", &jwk_json).unwrap();
+        let jwk_keys = JwkKeys { keys: vec![jwk_keypair.into_rsa_jwk()] };
+        let jwk_keys_json = serde_json::to_string(&jwk_keys).unwrap();
+        fs::write("jwk.json", &jwk_keys_json).unwrap();
         fs::write("jwk_keypair.json", &serde_json::to_string(&jwk_keypair).unwrap()).unwrap();
 
         fs::write("envvars.env", envvars.join("\n")).unwrap();
 
     } else if command == "request" {
+
+        let url = std::env::args().nth(2).expect("no url given");
 
         let tw_vk = Ed25519PublicKey::from_encoded_string(&fs::read_to_string("tw_vk.txt").unwrap()).unwrap();
 
@@ -114,7 +139,9 @@ fn main() {
             ).unwrap();
 
 
-        let testcase = ProofTestCase::default_with_payload(TestJWTPayload::default());
+        let testcase = ProofTestCase::default_with_payload(TestJWTPayload::default())
+        .compute_nonce(&get_circuit_config());
+
         let prover_request_input = testcase.convert_to_prover_request(&jwk_keypair);
 
         println!(
@@ -124,8 +151,8 @@ fn main() {
 
 
     let client = reqwest::blocking::Client::new();
-    let response_str = client.post("http://prover-service:8080/v0/prove")
-        .body(serde_json::to_string(&prover_request_input).unwrap())
+    let response_str = client.post(&(String::from("http://") + &url + "/v0/prove"))
+        .json(&prover_request_input)
         .send()
         .unwrap()
         .text()

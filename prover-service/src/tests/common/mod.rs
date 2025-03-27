@@ -62,7 +62,7 @@ pub fn get_test_circuit_config() -> CircuitConfig {
 pub fn gen_test_ephemeral_pk() -> EphemeralPublicKey {
     let ephemeral_private_key: Ed25519PrivateKey = EncodingType::Hex
         .decode_key(
-            "zkid test ephemeral private key",
+            "keyless test ephemeral private key",
             "0x76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7"
                 .as_bytes()
                 .to_vec(),

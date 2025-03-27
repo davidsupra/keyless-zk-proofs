@@ -9,4 +9,6 @@ shellexpand = { workspace = true }
 serde = { workspace = true } 
 serde_json = { workspace = true } 
 aptos-crypto = { workspace = true } 
+aptos-types = { workspace = true } 
+serde_yaml = { workspace = true } 
 reqwest = { workspace = true } 

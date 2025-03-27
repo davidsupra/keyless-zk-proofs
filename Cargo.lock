@@ -3111,11 +3111,13 @@ name = "mock-on-chain"
 version = "0.0.0"
 dependencies = [
  "aptos-crypto",
+ "aptos-types",
  "keyless-common",
  "prover-service",
  "reqwest",
  "serde",
  "serde_json",
+ "serde_yaml 0.9.32",
  "shellexpand",
 ]
 
