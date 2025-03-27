@@ -42,8 +42,8 @@ COPY --link --from=build_prover_service ./rust-rapidsnark/rapidsnark/build/subpr
 COPY --link --from=build_prover_service ./resources ./resources
 # copy prover service config file
 COPY --link ./prover-service/config.yml ./config.yml
-# copy prover service config file for running the automated docker test
-COPY --link ./prover-service/config_docker_test.yml ./config_docker_test.yml
+# copy prover service config file for running the automated docker test (not needed I think)
+#COPY --link ./prover-service/config_docker_test.yml ./config_docker_test.yml
 
 ARG GIT_COMMIT
 ENV GIT_COMMIT=$GIT_COMMIT

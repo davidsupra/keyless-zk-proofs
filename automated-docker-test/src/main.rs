@@ -95,7 +95,7 @@ fn main() {
         println!("Using release tag {}.", release_tag);
 
         let mut envvars = vec![];
-        envvars.push("CONFIG_FILE=\"config_docker_test.yml\"".to_string());
+        envvars.push("CONFIG_FILE=\"config.yml\"".to_string());
 
         println!("Circuit config path {}.", circuit_config_path(&release_tag));
         fs::copy(&circuit_config_path(&release_tag), "circuit_config.yml").unwrap();
