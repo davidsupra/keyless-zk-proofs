@@ -8,12 +8,12 @@ use crate::{
     input_processing::rsa::RsaPrivateKey,
     training_wheels::verification_logic::compute_nonce,
 };
-use keyless_common::input_processing::{config::CircuitConfig, encoding::FromFr};
 use aptos_types::{
     jwks::rsa::RSA_JWK, keyless::Pepper, transaction::authenticator::EphemeralPublicKey,
 };
 use ark_ff::{BigInteger, PrimeField};
 use jsonwebtoken::{Algorithm, Header};
+use keyless_common::input_processing::{config::CircuitConfig, encoding::FromFr};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -141,7 +141,7 @@ impl TestJWKKeyPair for DefaultTestJWKKeyPair {
         RSA_JWK::new_256_aqab(&self.kid, &self.pubkey_mod_b64())
     }
 
-    fn to_json(&self) -> Result<String, serde_json::Error>  {
+    fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string(&self.into_rsa_jwk())
     }
 }

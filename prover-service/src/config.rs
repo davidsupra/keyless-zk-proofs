@@ -1,9 +1,9 @@
 // Copyright © Aptos Foundation
 
 use crate::groth16_vk::{OnChainGroth16VerificationKey, SnarkJsGroth16VerificationKey};
-use keyless_common::input_processing::config::CircuitConfig;
 use figment::providers::{Env, Format, Yaml};
 use figment::Figment;
+use keyless_common::input_processing::config::CircuitConfig;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::fs;

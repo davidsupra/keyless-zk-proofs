@@ -16,7 +16,6 @@ use aptos_crypto::{
     encoding_type::EncodingType,
     Uniform,
 };
-use keyless_common::input_processing::{config::CircuitConfig, encoding::AsFr};
 use aptos_types::{
     jwks::rsa::RSA_JWK, keyless::Pepper, transaction::authenticator::EphemeralPublicKey,
 };
@@ -27,6 +26,7 @@ use figment::{
     providers::{Format as _, Yaml},
     Figment,
 };
+use keyless_common::input_processing::{config::CircuitConfig, encoding::AsFr};
 use rand::{rngs::ThreadRng, thread_rng};
 use rust_rapidsnark::FullProver;
 use serde::Serialize;
@@ -36,9 +36,7 @@ use tokio::sync::Mutex;
 pub mod types;
 
 use crate::groth16_vk::ON_CHAIN_GROTH16_VK;
-use crate::prover_key::{
-    TrainingWheelsKeyPair, ON_CHAIN_KEYLESS_CONFIG,
-};
+use crate::prover_key::{TrainingWheelsKeyPair, ON_CHAIN_KEYLESS_CONFIG};
 use crate::state::SetupSpecificState;
 
 const TEST_JWK_EXPONENT_STR: &str = "65537";

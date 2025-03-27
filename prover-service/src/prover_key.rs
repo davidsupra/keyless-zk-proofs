@@ -104,7 +104,7 @@ fn tw_vk_rewriter() {
     ) {
         let local_tw_sk_encoded = std::fs::read_to_string(&path_in).unwrap();
         let local_tw_sk =
-        Ed25519PrivateKey::from_encoded_string(local_tw_sk_encoded.as_str()).unwrap();
+            Ed25519PrivateKey::from_encoded_string(local_tw_sk_encoded.as_str()).unwrap();
         let local_tw_keypair = TrainingWheelsKeyPair::from_sk(local_tw_sk);
         write_tw_on_chain_repr_json(&local_tw_keypair, &path_out);
     }
