@@ -1,6 +1,5 @@
 
-use std::fs::{self, File};
-use std::io::Write;
+use std::fs::{self};
 use std::path::Path;
 use std::process::Command;
 
@@ -8,7 +7,6 @@ use aptos_crypto::ed25519::Ed25519PublicKey;
 use aptos_types::jwks::rsa::RSA_JWK;
 use prover_service::api::ProverServiceResponse;
 use prover_service::groth16_vk::SnarkJsGroth16VerificationKey;
-use prover_service::tests::common;
 use prover_service::tests::common::types::{DefaultTestJWKKeyPair, ProofTestCase, TestJWKKeyPair, TestJWTPayload};
 use aptos_crypto::ValidCryptoMaterialStringExt;
 use prover_service::training_wheels;

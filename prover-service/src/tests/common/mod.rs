@@ -37,7 +37,7 @@ pub mod types;
 
 use crate::groth16_vk::ON_CHAIN_GROTH16_VK;
 use crate::prover_key::{
-    OnChainKeylessConfiguration, TrainingWheelsKeyPair, ON_CHAIN_KEYLESS_CONFIG,
+    TrainingWheelsKeyPair, ON_CHAIN_KEYLESS_CONFIG,
 };
 use crate::state::SetupSpecificState;
 
