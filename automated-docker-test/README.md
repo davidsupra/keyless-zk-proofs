@@ -41,3 +41,19 @@ The crate has two functions. First, it allows for setting up the test, by
 The second function is to actually generate the request and to verify the
 response. It does this by generating the "default" request from the prover
 service smoke tests. This function is used by `dockerfiles/test-runner.Dockerfile`.
+
+
+## To test
+
+Ensure docker is installed and dev environment is setup, and then:
+
+```bash
+sudo docker build -f prover-service/Dockerfile . --build-arg RELEASE_DEFAULT="test_releases/test-ceremony-20250224" --build-arg "RELEASE_NEW=test_releases/test-ceremony-20250224"
+```
+you will get an image SHA, call it `<image-id>`
+```bash
+sudo docker tag <image-id> prover-service
+./scripts/task.sh setup download-ceremonies-for-releases "test_releases/test-ceremony-20250224" "test_releases/test-ceremony-20250224"
+./scripts/task.sh prover-service test-docker-image "test_releases/test-ceremony-20250224"
+```
+
