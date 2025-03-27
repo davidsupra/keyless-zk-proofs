@@ -21,7 +21,7 @@ def add_envvars_to_profile():
 def test_docker_image(release):
     """Run automated docker image test. Expects the prover service docker image to be tagged "prover-service"."""
     os.chdir(utils.repo_root())
-    utils.run_shell_command("docker image rm -f mock-on-chain-mock-on-chain || true ", as_root=True)
-    utils.run_shell_command("docker image rm -f mock-on-chain-test-runner || true ", as_root=True)
-    utils.run_shell_command(f"cd mock-on-chain && cargo run prepare-test \"{release}\" \"{release}\"")
-    utils.run_shell_command("docker compose -f mock-on-chain/test_deployment.yml up --abort-on-container-exit", as_root=True)
+    utils.run_shell_command("docker image rm -f automated-docker-test-mock-on-chain || true ", as_root=True)
+    utils.run_shell_command("docker image rm -f automated-docker-test-test-runner || true ", as_root=True)
+    utils.run_shell_command(f"cd automated-docker-test && cargo run prepare-test \"{release}\" \"{release}\"")
+    utils.run_shell_command("docker compose -f automated-docker-test/test_deployment.yml up --abort-on-container-exit", as_root=True)

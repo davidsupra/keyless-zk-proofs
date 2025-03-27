@@ -1,5 +1,5 @@
 [package]
-name = "mock-on-chain"
+name = "automated-docker-test"
 edition = "2021"
 
 [dependencies]

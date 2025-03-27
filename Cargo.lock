@@ -667,6 +667,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
+name = "automated-docker-test"
+version = "0.0.0"
+dependencies = [
+ "aptos-crypto",
+ "aptos-types",
+ "keyless-common",
+ "prover-service",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml 0.9.32",
+ "shellexpand",
+]
+
+[[package]]
 name = "axum"
 version = "0.6.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3104,21 +3119,6 @@ dependencies = [
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "mock-on-chain"
-version = "0.0.0"
-dependencies = [
- "aptos-crypto",
- "aptos-types",
- "keyless-common",
- "prover-service",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml 0.9.32",
- "shellexpand",
 ]
 
 [[package]]

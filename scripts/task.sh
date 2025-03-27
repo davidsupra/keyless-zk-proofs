@@ -49,7 +49,7 @@ install_deps() {
 install_deps
 
 if  [ -z $RESOURCES_DIR ]; then
-  RESOURCES_DIR="~/.local/share/aptos-keyless"
+  RESOURCES_DIR="$HOME/.local/share/aptos-keyless"
 fi
 mkdir -p $RESOURCES_DIR
 

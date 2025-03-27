@@ -36,7 +36,7 @@ services:
   test-runner:
     build:
       context: ..
-      dockerfile: ./mock-on-chain/dockerfiles/test-runner.Dockerfile
+      dockerfile: ./automated-docker-test/dockerfiles/test-runner.Dockerfile
     links:
       - prover-service
     depends_on:

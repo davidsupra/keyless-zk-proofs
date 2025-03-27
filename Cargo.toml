@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 
-members = ["circuit", "keyless-common", "prover-service", "vk-diff", "rust-rapidsnark", "mock-on-chain"]
+members = ["circuit", "keyless-common", "prover-service", "vk-diff", "rust-rapidsnark", "automated-docker-test"]
 
 [workspace.package]
 authors = ["Aptos Labs <opensource@aptoslabs.com>"]
