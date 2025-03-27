@@ -11,7 +11,7 @@ LOCAL_VK_IN=~/.local/share/aptos-prover-service/default/verification_key.json ON
 LOCAL_TW_VK_IN=private_key_for_testing.txt ONCHAIN_KEYLESS_CONFIG_OUT=keyless_config.json cargo test tw_vk_rewriter
 popd
 
-sudo docker compose -f ./test/test_deployment.yml up
+sudo docker compose -f ./docker-test/test_deployment.yml up
 
 
 

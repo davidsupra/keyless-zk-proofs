@@ -8,7 +8,7 @@ ARG TARGETARCH
 COPY --link . .
 
 # Install deps for building prover service
-RUN ./scripts/task.sh prover-service install-deps
+RUN ./scripts/task.sh prover-service install-deps 
 
 # Build prover service
 RUN /root/.cargo/bin/cargo build --release -p prover-service \

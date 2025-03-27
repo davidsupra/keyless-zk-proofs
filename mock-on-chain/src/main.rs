@@ -4,10 +4,15 @@ use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
+use aptos_crypto::ed25519::Ed25519PublicKey;
+use prover_service::api::ProverServiceResponse;
 use prover_service::groth16_vk::SnarkJsGroth16VerificationKey;
 use prover_service::tests::common;
-use prover_service::tests::common::types;
+use prover_service::tests::common::types::{DefaultTestJWKKeyPair, ProofTestCase, TestJWKKeyPair, TestJWTPayload};
 use aptos_crypto::ValidCryptoMaterialStringExt;
+use prover_service::training_wheels;
+use keyless_common::input_processing::{config::CircuitConfig, encoding::AsFr};
+
 
 fn ceremony_dir_exists(release_tag: &str) -> bool {
 
@@ -36,7 +41,7 @@ fn main() {
     // generate tw keypair
     // generate jwk keypair
 
-    // write out envvar file: (these envvars must be passed to prover service):w
+    // write out envvar file: (these envvars must be passed to prover service)
     // - ONCHAIN_GROTH16_VK_URL=http://mock-on-chain:4444/groth16_vk.json
     // - ONCHAIN_TW_VK_URL=http://mock-on-chain:4444/keyless_config.json
     // - PRIVATE_KEY_0=0x8c75cacb54de1af0bd7b6c0549548b8d39a8177320f46ca5f767e5ed603dc08b
@@ -51,19 +56,21 @@ fn main() {
     // /tw_vk.txt: tw vk, used during testing to verify prover service response
     //
     //
-    // SIGN FLOW
-    // =========
+    // SEND TEST REQUEST FLOW
+    // ======================
     // take as input:
     // - jwk_sk.txt
     // - tw_vk.txt 
     //
     // output prover service request
     
-    let command = std::env::args().nth(1).expect("No command given. Expected \"prepare-test\" or \"generate-request\"");
+    let command = std::env::args().nth(1).expect("No command given. Expected \"prepare-test\" or \"request\"");
 
     if command == "prepare-test" {
+
         let release_tag = std::env::args().nth(2).expect("no path given");
         let mut envvars = vec![];
+        envvars.push("CONFIG_FILE=\"config_docker_test.yml\"".to_string());
 
         if ! ceremony_dir_exists(&release_tag) {
             Command::new("../scripts/task.sh")
@@ -81,13 +88,71 @@ fn main() {
         fs::write("tw_vk.txt", &tw_keypair.verification_key.to_encoded_string().unwrap()).unwrap();
         envvars.push(format!("PRIVATE_KEY_0={}", &tw_keypair.signing_key.to_encoded_string().unwrap()));
         envvars.push(format!("PRIVATE_KEY_1={}", &tw_keypair.signing_key.to_encoded_string().unwrap()));
+        envvars.push(format!("ONCHAIN_TW_VK_URL={}", "http://mock-on-chain:4444/keyless_config.json"));
 
         // Convert verification_key.json output by snarkjs into the on-chain-config format
         let local_vk_json = std::fs::read_to_string(ceremony_vk_path(&release_tag)).unwrap();
         let local_vk: SnarkJsGroth16VerificationKey = serde_json::from_str(&local_vk_json).unwrap();
         prover_service::groth16_vk::write_vk_onchain_repr_file(local_vk, "groth16_vk.json");
+        fs::copy(&ceremony_vk_path(&release_tag), "snarkjs_verification_key.json").unwrap();
+        envvars.push(format!("ONCHAIN_GROTH16_VK_URL={}", "http://mock-on-chain:4444/groth16_vk.json"));
+
+        // JWK keypair
+        let jwk_keypair = prover_service::tests::common::gen_test_jwk_keypair();
+        let jwk_json = serde_json::to_string(&jwk_keypair.into_rsa_jwk()).unwrap();
+        fs::write("jwk.json", &jwk_json).unwrap();
+        fs::write("jwk_keypair.json", &serde_json::to_string(&jwk_keypair).unwrap()).unwrap();
 
         fs::write("envvars.env", envvars.join("\n")).unwrap();
+
+    } else if command == "request" {
+
+        let tw_vk = Ed25519PublicKey::from_encoded_string(&fs::read_to_string("tw_vk.txt").unwrap()).unwrap();
+
+        let jwk_keypair : DefaultTestJWKKeyPair = serde_json::from_str(
+            &fs::read_to_string("jwk_keypair.json").unwrap()
+            ).unwrap();
+
+
+        let testcase = ProofTestCase::default_with_payload(TestJWTPayload::default());
+        let prover_request_input = testcase.convert_to_prover_request(&jwk_keypair);
+
+        println!(
+            "Prover request: {}",
+            serde_json::to_string_pretty(&prover_request_input).unwrap()
+        );
+
+
+    let client = reqwest::blocking::Client::new();
+    let response_str = client.post("http://prover-service:8080/v0/prove")
+        .body(serde_json::to_string(&prover_request_input).unwrap())
+        .send()
+        .unwrap()
+        .text()
+        .unwrap();
+
+    println!("Prover response: {}", response_str);
+
+    let response : ProverServiceResponse = serde_json::from_str(&response_str).unwrap();
+
+    match response {
+        ProverServiceResponse::Success {
+            proof,
+            public_inputs_hash,
+            ..
+        } => {
+            let g16vk = prover_service::load_vk::prepared_vk("snarkjs_verification_key.json");
+            proof.verify_proof(public_inputs_hash.as_fr(), &g16vk).unwrap();
+            training_wheels::verify(&response, &tw_vk).unwrap();
+            println!("Verification of prover response succeeded")
+        }
+        ProverServiceResponse::Error { message } => {
+            panic!("returned ProverServiceResponse::Error: {}", message)
+        }
     }
 
+    } else {
+        
+        println!("Command not recognized. Expected \"prepare-test\" or \"request\"");
+    }
 }

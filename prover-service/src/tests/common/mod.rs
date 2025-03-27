@@ -77,11 +77,11 @@ pub fn gen_test_ephemeral_pk_blinder() -> ark_bn254::Fr {
     ark_bn254::Fr::from_str("42").unwrap()
 }
 
-pub fn gen_test_jwk_keypair() -> impl TestJWKKeyPair {
+pub fn gen_test_jwk_keypair() -> DefaultTestJWKKeyPair {
     gen_test_jwk_keypair_with_kid_override("test-rsa")
 }
 
-pub fn gen_test_jwk_keypair_with_kid_override(kid: &str) -> impl TestJWKKeyPair {
+pub fn gen_test_jwk_keypair_with_kid_override(kid: &str) -> DefaultTestJWKKeyPair {
     let mut rng = rsa::rand_core::OsRng;
     DefaultTestJWKKeyPair::new_with_kid_and_exp(
         &mut rng,

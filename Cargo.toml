@@ -71,8 +71,8 @@ prometheus = "0.13.3"
 rand = "0.7.3"
 rand_core = "0.6.4"
 regex = "1.10.5"
-reqwest = { version = "0.11.24", features = ["json", "stream"] }
-rsa = "0.9.6"
+reqwest = { version = "0.11.24", features = ["json", "stream", "blocking"] }
+rsa = { version = "0.9.6", features = ["serde"] }
 rust-rapidsnark = { path = "rust-rapidsnark" }
 rustls = "0.22.2"
 serde = { version = "1.0.196", features = ["derive"] }

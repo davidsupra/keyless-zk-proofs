@@ -91,6 +91,7 @@ pub trait TestJWKKeyPair {
     fn to_json(&self) -> Result<String, serde_json::Error>;
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct DefaultTestJWKKeyPair {
     kid: String,
     private_key: crate::input_processing::rsa::RsaPrivateKey,
