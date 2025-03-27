@@ -7,4 +7,37 @@ a prover service docker image. Specifically, it contains:
   prover service will query
 - a Dockerfile that performs the test
 - a docker compose file `test_deployment.yml` which orchestrates the
-  running of the test
+  running of the test.
+  
+To run the test, **ensure that the image you want to test is tagged
+`prover-service`**, and then run in the repo root:
+
+```bash
+./scripts/task.sh prover-service test-docker-image <circuit-release>
+```
+where `<circuit-release>` is one of the releases that the prover service
+image supports. 
+
+
+## The crate
+
+The crate has two functions. First, it allows for setting up the test, by
+
+- generating a training-wheels keypair
+- generating a JWK keypair
+- converting the circuit release's snarkjs verification key into its
+  on-chain represenation, and
+- Writing files for the TW VK, JWK json, and on-chain groth16 VK in
+  `test-staging`, which the service defined by
+  `dockerfiles/mock-on-chain.Dockerfile` will serve via http. This way, the
+  service will mock both the on-chain config for the groth16 and TW VKs,
+  as well as the OIDC JWK endpoint.
+- In addition, it writes out `envvars.env` which the prover service image
+  will take as environment variables, which contain the TW private keys and
+  the TW and Groth16 VK mocked endpoint URLs.
+- Finally, it writes out the JWK private key to a file so that a JWT can be
+  signed when generating a test request.
+
+The second function is to actually generate the request and to verify the
+response. It does this by generating the "default" request from the prover
+service smoke tests. This function is used by `dockerfiles/test-runner.Dockerfile`.

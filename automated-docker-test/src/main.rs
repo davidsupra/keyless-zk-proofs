@@ -117,6 +117,7 @@ fn main() {
         envvars.push(format!("PRIVATE_KEY_0={}", &tw_keypair.signing_key.to_encoded_string().unwrap()));
         envvars.push(format!("PRIVATE_KEY_1={}", &tw_keypair.signing_key.to_encoded_string().unwrap()));
         envvars.push(format!("ONCHAIN_TW_VK_URL={}", "http://mock-on-chain:4444/keyless_config.json"));
+        envvars.push(format!("OIDC_PROVIDERS={}", "[ { iss=\"test.oidc.provider\", endpoint_url=\"http://mock-on-chain:4444/jwk.json\" } ]"));
 
         // Convert verification_key.json output by snarkjs into the on-chain-config format
         let local_vk_json = std::fs::read_to_string(ceremony_vk_path(&release_tag)).unwrap();
