@@ -59,4 +59,6 @@ jobs:
             GIT_COMMIT=${{ github.sha }}
             RELEASE_DEFAULT="test_releases/test-ceremony-20250224"
             RELEASE_NEW="test_releases/test-ceremony-20250224"
+
+      - run: ./scripts/task.sh prover-service download-ceremonies-for-releases "test_releases/test-ceremony-20250224" "test_releases/test-ceremony-20250224"
       - run: ./scripts/task.sh prover-service test-docker-image "test_releases/test-ceremony-20250224"
