@@ -21,7 +21,7 @@ services:
     ports: 
       - 8080:8080
     env_file:
-      - envvars.env
+      - test-staging/envvars.env
     depends_on:
       mock-on-chain:
         condition: service_healthy
