@@ -1,4 +1,4 @@
-# Keyless ZK circuit and ZK proving service
+# Keyless ZK circuit and ZK proving service!
 
 This repo contains:
 1. The `circom` implementation of the Aptos Keyless ZK relation from AIP-61 in `circuit/templates/`.
