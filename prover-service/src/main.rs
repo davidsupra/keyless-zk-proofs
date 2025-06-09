@@ -18,6 +18,7 @@ use axum_prometheus::{
 };
 use prover_service::config::CONFIG;
 use std::{fs, net::SocketAddr, sync::Arc, time::Duration};
+use std::time::Instant;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -34,7 +35,9 @@ async fn main() {
     // init tracing
     logging::init_tracing().expect("Couldn't init tracing.");
     info!("CONFIG={:?}", CONFIG);
+    let timer = Instant::now();
     let state = ProverServiceState::init();
+    print!("groth16_prover_init_time={:?}", timer.elapsed());
     let state = Arc::new(state);
 
     let vkey = fs::read_to_string(state.config.verification_key_path())
