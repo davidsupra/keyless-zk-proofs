@@ -56,6 +56,8 @@ def count_r1cs_nonzero_terms():
             compile(o=True, circom_file_path=None)
 
             a_nonzero = b_nonzero = c_nonzero = 0
+            union_nonzero = 0
+            max_nonzero = 0
 
             with open("main_constraints.json") as f:
                 constraints = json.load(f)["constraints"]
@@ -63,6 +65,8 @@ def count_r1cs_nonzero_terms():
                     a_nonzero += len(a)
                     b_nonzero += len(b)
                     c_nonzero += len(c)
+                    union_nonzero += len(a | b | c)
+                    max_nonzero += max(len(a), len(b), len(c))
 
             total_nonzero = a_nonzero + b_nonzero + c_nonzero
 
@@ -75,4 +79,6 @@ def count_r1cs_nonzero_terms():
             print(f"The matrix C has {c_nonzero:,} nonzero terms.")
             print("-------------------------------------------------")
             print(f"Total number of nonzero terms: {total_nonzero :,} .")
+            print(f"Union of nonzero terms count: {union_nonzero :,} .")
+            print(f"Row-wise max of nonzero terms count: {max_nonzero :,} .")
 
