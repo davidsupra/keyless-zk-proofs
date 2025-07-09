@@ -56,38 +56,25 @@ def count_r1cs_nonzero_terms():
             compile(o=True, circom_file_path=None)
 
             a_nonzero = b_nonzero = c_nonzero = 0
-            a_nonbin = b_nonbin = c_nonbin = 0
             union_nonzero = 0
             max_nonzero = 0
 
             with open("main_constraints.json") as f:
                 constraints = json.load(f)["constraints"]
                 for [a,b,c] in constraints:
-                    assert all(x != 1 for x in a)
-                    assert all(x != 1 for x in b)
-                    assert all(x != 1 for x in c)
-                    a_nonbin  += sum(x not in (0, 1) for x in a)
-                    b_nonbin  += sum(x not in (0, 1) for x in b)
-                    c_nonbin  += sum(x not in (0, 1) for x in c)
                     a_nonzero += len(a)
                     b_nonzero += len(b)
                     c_nonzero += len(c)
+                    # emulates len(r_1 * a + r_2 * b + r_3 * c) for random r_i's
                     union_nonzero += len(a | b | c)
                     max_nonzero += max(len(a), len(b), len(c))
 
             total_nonzero = a_nonzero + b_nonzero + c_nonzero
-            total_nonbin = a_nonbin + b_nonbin + c_nonbin
 
             print("")
             print("")
             print("")
 
-            print(f"The matrix A has {a_nonbin:,} nonbin terms.")
-            print(f"The matrix B has {b_nonbin:,} nonbin terms.")
-            print(f"The matrix C has {c_nonbin:,} nonbin terms.")
-            print("-------------------------------------------------")
-            print(f"nonbin(A) + nonbin(B) + nonbin(C): {total_nonbin :,} .")
-            print()
             print(f"The matrix A has {a_nonzero:,} nonzero terms.")
             print(f"The matrix B has {b_nonzero:,} nonzero terms.")
             print(f"The matrix C has {c_nonzero:,} nonzero terms.")
