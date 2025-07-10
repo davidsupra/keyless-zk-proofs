@@ -48,38 +48,46 @@ def compile(
 
 
 @app.command()
-def count_r1cs_nonzero_terms():
-    """Compiles the circuit with optimizations on, then counts the number of nonzero constraints in each of the R1CS matrices."""
+def count_r1cs_nonzero_terms(
+    constraints_json_path: Optional[Path] = typer.Option(
+        None, "--json", "-j", help="Optional path to main_constraints.json")
+):
+    """
+    Counts the number of nonzero constraints in each of the R1CS matrices.
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        with contextlib.chdir(temp_dir):
-            compile(o=True, circom_file_path=None)
+    If `constraints_path` is given, loads constraints from that file.
+    Otherwise, compiles the circuit in a temporary directory.
+    """
+    def load_and_count(path: str):
+        a_nonzero = b_nonzero = c_nonzero = 0
+        union_nonzero = 0
+        max_nonzero = 0
 
-            a_nonzero = b_nonzero = c_nonzero = 0
-            union_nonzero = 0
-            max_nonzero = 0
+        with open(path) as f:
+            constraints = json.load(f)["constraints"]
+            for [a, b, c] in constraints:
+                a_nonzero += len(a)
+                b_nonzero += len(b)
+                c_nonzero += len(c)
+                union_nonzero += len(a | b | c)
+                max_nonzero += max(len(a), len(b), len(c))
 
-            with open("main_constraints.json") as f:
-                constraints = json.load(f)["constraints"]
-                for [a,b,c] in constraints:
-                    a_nonzero += len(a)
-                    b_nonzero += len(b)
-                    c_nonzero += len(c)
-                    # emulates len(r_1 * a + r_2 * b + r_3 * c) for random r_i's
-                    union_nonzero += len(a | b | c)
-                    max_nonzero += max(len(a), len(b), len(c))
+        total_nonzero = a_nonzero + b_nonzero + c_nonzero
 
-            total_nonzero = a_nonzero + b_nonzero + c_nonzero
+        print("")
+        print(f"The matrix A has {a_nonzero:,} nonzero terms.")
+        print(f"The matrix B has {b_nonzero:,} nonzero terms.")
+        print(f"The matrix C has {c_nonzero:,} nonzero terms.")
+        print("-------------------------------------------------")
+        print(f"nonzero(A) + nonzero(B) + nonzero(C): {total_nonzero:,} .")
+        print(f"nonzero(r_1 A + r_2 B + r_3 C): {union_nonzero:,} .")
+        print(f"Row-wise max of nonzero terms count: {max_nonzero:,} .")
 
-            print("")
-            print("")
-            print("")
-
-            print(f"The matrix A has {a_nonzero:,} nonzero terms.")
-            print(f"The matrix B has {b_nonzero:,} nonzero terms.")
-            print(f"The matrix C has {c_nonzero:,} nonzero terms.")
-            print("-------------------------------------------------")
-            print(f"nonzero(A) + nonzero(B) + nonzero(C): {total_nonzero :,} .")
-            print(f"nonzero(r_1 A + r_2 B + r_3 C): {union_nonzero :,} .")
-            print(f"Row-wise max of nonzero terms count: {max_nonzero :,} .")
+    if constraints_json_path:
+        load_and_count(constraints_json_path)
+    else:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with contextlib.chdir(temp_dir):
+                compile(o=True, circom_file_path=None)
+                load_and_count("main_constraints.json")
 
