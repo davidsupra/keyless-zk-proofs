@@ -120,6 +120,25 @@ impl JwtHeader {
     }
 }
 
+#[test]
+fn test_negative_iat() {
+    let s = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3QtcnNhIiwidHlwIjoiSldUIn0.eyJpc3MiOiJ0ZXN0Lm9pZGMucHJvdmlkZXIiLCJhdWQiOiJhcHAxIiwic3ViIjoidXNlcjEiLCJlbWFpbCI6InVzZXIxQGFwdG9zbGFicy5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiaWF0IjotMzAwMCwiZXhwIjo2MDAsIm5vbmNlIjoiMTIzNDU2Nzg5MCJ9.d6ykfgFscZG-rEoq5zkIbKjVf8cQwvindifmuRV-lfc6a2C8a62v0StqrdjljAhK1CXtHE-YKKCnXBPf75p-szmDSMDiUdwn7veAFWEZmaB2qtsdvhgzs1U4HEXAOwfowX7Ei4hCno1zNE6gFrwgesMEIXoT4kAYgd8mEOhCy22FP6Ry75kplw7n1Z7RFfg3RnKJQOUfkLbcxbYDbi_P9wq2krj1bmRzCPf87ya5HY11wrVqmfqKeO_HJMwt7r7ElBKumq9aHqEqLBcZce7AG5pFJPZZ3lLhUyjpzF-YPOVcYN3K--pBQOhfiF0STqjF3CQHrdRGoOwnvwEMFOyMiA";
+    /*
+    {
+      "iss": "test.oidc.provider",
+      "aud": "app1",
+      "sub": "user1",
+      "email": "user1@aptoslabs.com",
+      "email_verified": true,
+      "iat": -3000,
+      "exp": 600,
+      "nonce": "1234567890"
+    }
+    */
+    let payload = JwtPayload::from_b64(s).unwrap();
+    println!("iat={}", payload.iat);
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct JwtPayload {
     pub iss: String,
