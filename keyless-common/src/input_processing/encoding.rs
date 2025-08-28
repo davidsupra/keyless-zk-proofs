@@ -122,21 +122,20 @@ impl JwtHeader {
 
 #[test]
 fn test_negative_iat() {
-    let s = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3QtcnNhIiwidHlwIjoiSldUIn0.eyJpc3MiOiJ0ZXN0Lm9pZGMucHJvdmlkZXIiLCJhdWQiOiJhcHAxIiwic3ViIjoidXNlcjEiLCJlbWFpbCI6InVzZXIxQGFwdG9zbGFicy5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiaWF0IjotMzAwMCwiZXhwIjo2MDAsIm5vbmNlIjoiMTIzNDU2Nzg5MCJ9.d6ykfgFscZG-rEoq5zkIbKjVf8cQwvindifmuRV-lfc6a2C8a62v0StqrdjljAhK1CXtHE-YKKCnXBPf75p-szmDSMDiUdwn7veAFWEZmaB2qtsdvhgzs1U4HEXAOwfowX7Ei4hCno1zNE6gFrwgesMEIXoT4kAYgd8mEOhCy22FP6Ry75kplw7n1Z7RFfg3RnKJQOUfkLbcxbYDbi_P9wq2krj1bmRzCPf87ya5HY11wrVqmfqKeO_HJMwt7r7ElBKumq9aHqEqLBcZce7AG5pFJPZZ3lLhUyjpzF-YPOVcYN3K--pBQOhfiF0STqjF3CQHrdRGoOwnvwEMFOyMiA";
+    let s = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3QtcnNhIiwidHlwIjoiSldUIn0.eyJpc3MiOiJ0ZXN0Lm9pZGMucHJvdmlkZXIiLCJhdWQiOiJhcHAxIiwic3ViIjoidXNlcjEiLCJlbWFpbCI6InVzZXIxQGFwdG9zbGFicy5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiaWF0IjotOTIyMzM3MjAzNjg1NDc3NTgwOCwiZXhwIjoxNzU2MzQyNjU5LCJub25jZSI6IjEyMzQ1Njc4OTAifQ.UWDU36pOvZnq-rz9ml6Y--SYD81Vl_iISZMzhTl4McT_QSt__izI9BZMnBkuuVL-Q5WO6c6PBTd61f4Ick5x7o8TRSsL64gP1a4CG-uoRa7y9nH_Bz5vK3vfQ82LOl8APRYrVUj5uunJCroWIif3D8Fdq7Kb8JLhOftMZcH7wx2YVGkwhBBbhaeX92bP64awCOQRavCZPOZbOqgL_DjzOsstA0o5DSum4DN1cLhHP2UtPx491SmMsMAtmUgSD3TsKd2_J_D-tPwPHlL93fDXTNf0zb58dKsJjfuuTyILl4g2js3DZmbccaddR1UFb7D4Ogo-S0kkMyh0cCTaT4_LLg";
     /*
-    {
-      "iss": "test.oidc.provider",
-      "aud": "app1",
-      "sub": "user1",
-      "email": "user1@aptoslabs.com",
-      "email_verified": true,
-      "iat": -3000,
-      "exp": 600,
-      "nonce": "1234567890"
-    }
+{
+  "iss": "test.oidc.provider",
+  "aud": "app1",
+  "sub": "user1",
+  "email": "user1@aptoslabs.com",
+  "email_verified": true,
+  "iat": -9223372036854776000,
+  "exp": 1756342659,
+  "nonce": "1234567890"
+}
     */
-    let payload = JwtPayload::from_b64(s).unwrap();
-    println!("iat={}", payload.iat);
+    assert!(JwtPayload::from_b64(s).is_err());
 }
 
 #[derive(Serialize, Deserialize, Debug)]
