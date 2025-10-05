@@ -335,7 +335,7 @@ if [[ $SKIP_BACKEND -eq 0 ]]; then
   fi
   export ICICLE_BACKEND_INSTALL_DIR="$ICICLE_PREFIX/lib/backend"
   log "Exporting ICICLE_BACKEND_INSTALL_DIR=$ICICLE_BACKEND_INSTALL_DIR for current session"
-  python3 - <<'PY'
+  REPO_ROOT="$REPO_ROOT" ICICLE_BACKEND_INSTALL_DIR="$ICICLE_BACKEND_INSTALL_DIR" python3 - <<'PY'
 import os
 import sys
 repo_root = os.environ["REPO_ROOT"]
