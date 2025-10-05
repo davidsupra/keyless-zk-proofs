@@ -88,12 +88,27 @@ for tool in curl tar; do
   fi
 done
 
+TMPDIR=$(mktemp -d)
+trap 'rm -rf "$TMPDIR"' EXIT
+
 if [[ "$RELEASE" == "latest" ]]; then
   API_URL="https://api.github.com/repos/ingonyama-zk/icicle/releases/latest"
+  METADATA_JSON="$TMPDIR/latest.json"
   log "Fetching latest release metadata"
-  TAG=$(curl -sSf "$API_URL" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
-  if [[ -z "${TAG:-}" ]]; then
+  for attempt in 1 2 3; do
+    if curl -sSf "$API_URL" -o "$METADATA_JSON"; then
+      break
+    fi
+    log "curl failed to fetch release metadata (attempt $attempt); retrying"
+    sleep 2
+  done
+  if [[ ! -s "$METADATA_JSON" ]]; then
     error "Failed to determine latest release tag"
+    exit 1
+  fi
+  TAG=$(sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$METADATA_JSON" | head -n1)
+  if [[ -z "${TAG:-}" ]]; then
+    error "Failed to parse release tag from metadata"
     exit 1
   fi
 else
@@ -111,9 +126,6 @@ else
 fi
 
 DOWNLOAD_URL="https://github.com/ingonyama-zk/icicle/releases/download/${TAG_WITH_V}/${ARCHIVE_NAME}"
-
-TMPDIR=$(mktemp -d)
-trap 'rm -rf "$TMPDIR"' EXIT
 ARCHIVE_PATH="${TMPDIR}/${ARCHIVE_NAME}"
 
 log "Downloading ${DOWNLOAD_URL}"

@@ -51,3 +51,18 @@ The goal was to keep the existing Rapidsnark code path intact while opportunisti
 - Support alternative devices (e.g. Metal/Vulkan backends) by extending `initialize()` to probe available backends rather than assuming CUDA.
 - Offload additional primitives, such as pairing operations or witness preparation, once Icicle exports suitable kernels.
 - Expand the build script to allow prebuilt Icicle binaries instead of compiling the third-party source every time when cross-compiling or using CI caches.
+
+## GPU Sanity Test
+
+After installing the CUDA stack, downloading the Icicle backend, and compiling the prover, run a
+small proof to confirm the GPU path is taken:
+
+```bash
+./scripts/run_gpu_sanity.sh
+```
+
+The script invokes a dedicated binary that proves the toy circuit shipped in
+`prover-service/resources/toy_circuit`, resets `MyLogFile.log`, and then checks for the
+`Initialized icicle GPU backend` log line. A non-zero exit code means either the prover fell back
+to the CPU implementation or the GPU status could not be determined. The same behaviour is exposed
+through `./scripts/task.sh misc compute-sample-proof` if you prefer the Typer CLI wrapper.
