@@ -225,6 +225,87 @@ load_nvm
 
 ensure_poetry
 
+select_poetry_python() {
+  local candidates=()
+  if [[ -n "${POETRY_PYTHON:-}" ]]; then
+    candidates+=("$POETRY_PYTHON")
+  fi
+  candidates+=(python3.12 python3.11 python3)
+  for candidate in "${candidates[@]}"; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      if "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)'; then
+        command -v "$candidate"
+        return 0
+      fi
+    fi
+  done
+  return 1
+}
+
+install_python_via_apt() {
+  if [[ $EUID -ne 0 ]] && ! command -v sudo >/dev/null 2>&1; then
+    warn "Need root privileges or sudo access to install Python via apt-get."
+    return 1
+  fi
+  if ! command -v apt-get >/dev/null 2>&1; then
+    return 1
+  fi
+  log "Attempting to install Python 3.11 via apt-get"
+  local apt_cmd=(apt-get)
+  if [[ $EUID -ne 0 ]]; then
+    apt_cmd=(sudo apt-get)
+  fi
+  "${apt_cmd[@]}" update
+  if "${apt_cmd[@]}" install -y python3.11 python3.11-venv python3.11-distutils; then
+    return 0
+  fi
+  warn "Direct apt install of python3.11 failed; trying deadsnakes PPA"
+  if ! command -v add-apt-repository >/dev/null 2>&1; then
+    "${apt_cmd[@]}" install -y software-properties-common
+  fi
+  local add_repo_cmd=(add-apt-repository)
+  if [[ $EUID -ne 0 ]]; then
+    add_repo_cmd=(sudo add-apt-repository)
+  fi
+  if ! command -v add-apt-repository >/dev/null 2>&1; then
+    warn "add-apt-repository not available; cannot add deadsnakes PPA automatically."
+    return 1
+  fi
+  "${add_repo_cmd[@]}" -y ppa:deadsnakes/ppa
+  "${apt_cmd[@]}" update
+  "${apt_cmd[@]}" install -y python3.11 python3.11-venv python3.11-distutils
+}
+
+resolve_poetry_python() {
+  local selected
+  selected=$(select_poetry_python || true)
+  if [[ -n "$selected" ]]; then
+    printf '%s\n' "$selected"
+    return 0
+  fi
+  if install_python_via_apt; then
+    selected=$(select_poetry_python || true)
+    if [[ -n "$selected" ]]; then
+      printf '%s\n' "$selected"
+      return 0
+    fi
+  else
+    if command -v apt-get >/dev/null 2>&1; then
+      warn "Automatic installation of Python 3.11 via apt-get failed."
+    fi
+  fi
+  return 1
+}
+
+POETRY_PYTHON_CMD=$(resolve_poetry_python || true)
+if [[ -z "$POETRY_PYTHON_CMD" ]]; then
+  err "Python 3.11+ is required for poetry (project targets ^3.11). Install python3.11 manually or set POETRY_PYTHON before running."
+  exit 1
+fi
+
+log "Using $POETRY_PYTHON_CMD for poetry virtual environment"
+poetry env use "$POETRY_PYTHON_CMD" >/dev/null 2>&1 || poetry env use "$POETRY_PYTHON_CMD"
+
 log "Installing Python dependencies via poetry"
 poetry install
 
