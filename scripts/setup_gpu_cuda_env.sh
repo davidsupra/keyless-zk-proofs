@@ -207,14 +207,6 @@ fi
 prover_deps=(pkg-config lld meson rust clang cmake make libyaml nasm gmp openssl)
 run_manage_deps "prover-service" "${prover_deps[@]}"
 
-circuit_deps=(circom snarkjs circomlib nlohmann-json nasm)
-if [[ $needs_node -eq 1 ]]; then
-  circuit_deps=(node "${circuit_deps[@]}")
-fi
-run_manage_deps "circuit" "${circuit_deps[@]}"
-
-load_nvm
-
 if [[ -f "$HOME/.cargo/env" ]]; then
   # shellcheck disable=SC1091
   . "$HOME/.cargo/env"
@@ -222,6 +214,14 @@ fi
 if [[ -d "$HOME/.cargo/bin" ]]; then
   export PATH="$HOME/.cargo/bin:$PATH"
 fi
+
+circuit_deps=(circom snarkjs circomlib nlohmann-json nasm)
+if [[ $needs_node -eq 1 ]]; then
+  circuit_deps=(node "${circuit_deps[@]}")
+fi
+run_manage_deps "circuit" "${circuit_deps[@]}"
+
+load_nvm
 
 ensure_poetry
 
