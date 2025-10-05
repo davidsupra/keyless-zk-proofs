@@ -183,8 +183,12 @@ require_cmd curl
 cd "$REPO_ROOT"
 
 if [[ $SKIP_SUBMODULES -eq 0 ]]; then
-  log "Updating git submodules (icicle et al.)"
-  git submodule update --init --recursive
+  if [[ -f "$REPO_ROOT/.gitmodules" ]] && git config --file "$REPO_ROOT/.gitmodules" --get-regexp '^submodule\.' >/dev/null 2>&1; then
+    log "Updating git submodules (icicle et al.)"
+    git submodule update --init --recursive
+  else
+    warn "No git submodules configured; skipping submodule update"
+  fi
 else
   log "Skipping submodule update"
 fi
