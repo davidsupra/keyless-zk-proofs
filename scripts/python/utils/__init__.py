@@ -13,6 +13,19 @@ import tempfile
 import contextlib
 import json
 
+
+if not hasattr(contextlib, "chdir"):
+    @contextlib.contextmanager
+    def chdir(path):
+        prev = os.getcwd()
+        os.chdir(path)
+        try:
+            yield
+        finally:
+            os.chdir(prev)
+
+    contextlib.chdir = chdir
+
 envvars_were_added = False
 
 def repo_root():
@@ -165,7 +178,6 @@ def force_symlink_dir(target, link_path):
 
 def eprint(s):
     print(s, file=sys.stderr)
-
 
 
 
