@@ -6,6 +6,10 @@
 #ifdef USE_OPENMP
 #include <omp.h>
 #endif
+#ifdef USE_ICICLE_GPU
+#include <type_traits>
+#include "icicle_adapter.hpp"
+#endif
 
 using namespace std;
 
@@ -191,6 +195,13 @@ void FFT<Field>::reversePermutation(Element* a, std::uint64_t n)
 template <typename Field>
 void FFT<Field>::fft(Element* a, std::uint64_t n)
 {
+#ifdef USE_ICICLE_GPU
+    if constexpr (std::is_same_v<Field, AltBn128::Engine::Fr>) {
+        if (aptos::icicle::ntt_forward(reinterpret_cast<AltBn128::FrElement*>(a), n)) {
+            return;
+        }
+    }
+#endif
     reversePermutation(a, n);
     std::uint64_t domainPow = log2(n);
     assert(((std::uint64_t)1 << domainPow) == n);
@@ -221,6 +232,13 @@ void FFT<Field>::fft(Element* a, std::uint64_t n)
 template <typename Field>
 void FFT<Field>::ifft(Element* a, std::uint64_t n)
 {
+#ifdef USE_ICICLE_GPU
+    if constexpr (std::is_same_v<Field, AltBn128::Engine::Fr>) {
+        if (aptos::icicle::ntt_inverse(reinterpret_cast<AltBn128::FrElement*>(a), n)) {
+            return;
+        }
+    }
+#endif
     fft(a, n);
     std::uint64_t domainPow = log2(n);
     std::uint64_t nDiv2     = n >> 1;

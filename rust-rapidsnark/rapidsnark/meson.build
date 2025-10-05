@@ -11,6 +11,12 @@ default_options: [
   ]
 )
 
+cc = meson.get_compiler('cpp')
+add_project_arguments('-DUSE_ICICLE_GPU', language : 'cpp')
+
+project_includes = include_directories('src')
+icicle_includes = include_directories('../../third_party/icicle/icicle/include')
+
 # If we are on x86-64, need nasm 
 if build_machine.cpu_family() == 'x86_64'
   add_languages('nasm')
@@ -62,6 +68,12 @@ deps = [
   scope_guard_dep
   ]
 
+icicle_build_dir = join_paths(meson.current_source_dir(), '../../third_party/icicle/build')
+icicle_curve_dep = cc.find_library('icicle_curve_bn254', dirs : icicle_build_dir)
+icicle_field_dep = cc.find_library('icicle_field_bn254', dirs : icicle_build_dir)
+icicle_device_dep = cc.find_library('icicle_device', dirs : icicle_build_dir)
+deps += [icicle_curve_dep, icicle_field_dep, icicle_device_dep]
+
 
 # SOURCE FILES
 ##############
@@ -76,6 +88,7 @@ src_files_common = [
   'fq.cpp',
   'fr.cpp',
   'fullprover.cpp',
+  'icicle_adapter.cpp',
   'groth16.cpp',
   'logger.cpp',
   'misc.cpp',
@@ -140,5 +153,5 @@ rapidsnark_lib = static_library(
   'rapidsnark', 
   src, 
   dependencies: deps,
+  include_directories: [project_includes, icicle_includes],
 )
-

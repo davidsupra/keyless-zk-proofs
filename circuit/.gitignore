@@ -3,3 +3,4 @@ node_modules/
 templates/main.r1cs
 templates/main.sym
 templates/main_js
+main.r1cs

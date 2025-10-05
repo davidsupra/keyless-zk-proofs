@@ -5,6 +5,10 @@
 #include "misc.hpp"
 #include "multiexp.hpp"
 #include "alt_bn128.hpp"
+#ifdef USE_ICICLE_GPU
+#include <type_traits>
+#include "icicle_adapter.hpp"
+#endif
 
 template <typename Curve>
 void ParallelMultiexp<Curve>::initAccs()
@@ -185,6 +189,17 @@ void ParallelMultiexp<Curve>::multiexp(typename Curve::Point&       r,
                                        uint8_t* _scalars, uint64_t _scalarSize,
                                        uint64_t _n, uint64_t _nThreads)
 {
+#ifdef USE_ICICLE_GPU
+    if constexpr (std::is_same_v<Curve, AltBn128::Engine::G1>) {
+        if (aptos::icicle::msm_g1(_bases, _scalars, _scalarSize, _n, r)) {
+            return;
+        }
+    } else if constexpr (std::is_same_v<Curve, AltBn128::Engine::G2>) {
+        if (aptos::icicle::msm_g2(_bases, _scalars, _scalarSize, _n, r)) {
+            return;
+        }
+    }
+#endif
     nThreads = tbb::this_task_arena::max_concurrency();
 
     bases      = _bases;
@@ -251,6 +266,17 @@ void ParallelMultiexp<Curve>::multiexp(typename Curve::Point&       r,
                                        uint64_t _n, uint64_t nx, uint64_t x[],
                                        uint64_t _nThreads)
 {
+#ifdef USE_ICICLE_GPU
+    if constexpr (std::is_same_v<Curve, AltBn128::Engine::G1>) {
+        if (aptos::icicle::msm_g1(_bases, _scalars, _scalarSize, _n, r)) {
+            return;
+        }
+    } else if constexpr (std::is_same_v<Curve, AltBn128::Engine::G2>) {
+        if (aptos::icicle::msm_g2(_bases, _scalars, _scalarSize, _n, r)) {
+            return;
+        }
+    }
+#endif
     nThreads = tbb::this_task_arena::max_concurrency();
 
     bases      = _bases;

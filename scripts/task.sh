@@ -2,7 +2,8 @@
 
 set -e
 
-SCRIPT_DIR=$(dirname "$0")
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 
 install_deps() {
   if ! command -v python3 > /dev/null || ! command -v curl > /dev/null; then
@@ -47,13 +48,12 @@ install_deps() {
 
 install_deps
 
-if ! ls .venv &> /dev/null; then
-  python3 -m venv .venv
-fi
-if ! .venv/bin/pip3 show google-cloud-storage typer &> /dev/null;  then
-  .venv/bin/pip3 install google-cloud-storage typer &> /dev/null
+if ! command -v poetry > /dev/null; then
+  >&2 echo "Poetry is required but was not found. Install Poetry from https://python-poetry.org/docs/#installation."
+  exit 1
 fi
 
-.venv/bin/python3 $SCRIPT_DIR/python/main.py "$@"
+poetry --directory "$REPO_ROOT" install
+poetry --directory "$REPO_ROOT" run python "$SCRIPT_DIR/python/main.py" "$@"
 
 

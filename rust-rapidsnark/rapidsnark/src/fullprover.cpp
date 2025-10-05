@@ -18,6 +18,10 @@
 #include "wtns_utils.hpp"
 #include "zkey_utils.hpp"
 
+#ifdef USE_ICICLE_GPU
+#include "icicle_adapter.hpp"
+#endif
+
 #include <mutex>
 
 class FullProverImpl
@@ -136,6 +140,13 @@ std::string getfilename(std::string path)
 FullProverImpl::FullProverImpl(const char* _zkeyFileName)
 {
     std::cout << "in FullProverImpl constructor" << std::endl;
+#ifdef USE_ICICLE_GPU
+    if (aptos::icicle::initialize()) {
+        log_info("Initialized icicle GPU backend");
+    } else {
+        log_info("icicle GPU backend unavailable; using CPU implementation");
+    }
+#endif
     mpz_init(altBbn128r);
     mpz_set_str(altBbn128r,
                 "21888242871839275222246405745257275088548364400416034343698204"
