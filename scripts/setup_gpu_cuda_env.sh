@@ -322,18 +322,29 @@ if [[ $SKIP_BACKEND -eq 0 ]]; then
     err "Backend installer script not found at $backend_script"
     exit 1
   fi
-  log "Installing Icicle backend (${ICICLE_VERSION}/${ICICLE_DISTRO}/${ICICLE_FLAVOR}) into $ICICLE_PREFIX"
-  if [[ -w "$ICICLE_PREFIX" ]]; then
-    bash "$backend_script" "${INSTALL_ARGS[@]}"
-  elif [[ ! -e "$ICICLE_PREFIX" ]] && [[ -w "$(dirname "$ICICLE_PREFIX")" ]]; then
-    bash "$backend_script" "${INSTALL_ARGS[@]}"
-  elif command -v sudo >/dev/null 2>&1; then
-    sudo bash "$backend_script" "${INSTALL_ARGS[@]}"
-  else
-    err "Cannot write to $ICICLE_PREFIX and sudo is unavailable."
-    exit 1
+  backend_dir="$ICICLE_PREFIX/lib/backend"
+  backend_present=0
+  if [[ -d "$backend_dir" ]]; then
+    if find "$backend_dir" -maxdepth 1 -type f \( -name "*.so" -o -name "*.dylib" -o -name "*.dll" \) | grep -q .; then
+      backend_present=1
+    fi
   fi
-  export ICICLE_BACKEND_INSTALL_DIR="$ICICLE_PREFIX/lib/backend"
+  if [[ $backend_present -eq 1 ]] && [[ $ICICLE_FORCE -ne 1 ]]; then
+    log "Icicle backend already present at $backend_dir; skipping download"
+  else
+    log "Installing Icicle backend (${ICICLE_VERSION}/${ICICLE_DISTRO}/${ICICLE_FLAVOR}) into $ICICLE_PREFIX"
+    if [[ -w "$ICICLE_PREFIX" ]]; then
+      bash "$backend_script" "${INSTALL_ARGS[@]}"
+    elif [[ ! -e "$ICICLE_PREFIX" ]] && [[ -w "$(dirname "$ICICLE_PREFIX")" ]]; then
+      bash "$backend_script" "${INSTALL_ARGS[@]}"
+    elif command -v sudo >/dev/null 2>&1; then
+      sudo bash "$backend_script" "${INSTALL_ARGS[@]}"
+    else
+      err "Cannot write to $ICICLE_PREFIX and sudo is unavailable."
+      exit 1
+    fi
+  fi
+  export ICICLE_BACKEND_INSTALL_DIR="$backend_dir"
   log "Exporting ICICLE_BACKEND_INSTALL_DIR=$ICICLE_BACKEND_INSTALL_DIR for current session"
   REPO_ROOT="$REPO_ROOT" ICICLE_BACKEND_INSTALL_DIR="$ICICLE_BACKEND_INSTALL_DIR" python3 - <<'PY'
 import os
