@@ -36,7 +36,7 @@ The goal was to keep the existing Rapidsnark code path intact while opportunisti
 
 1. Install the CUDA toolkit and drivers that match the GPU where the prover will run.
 2. Install, or symlink, the Icicle CUDA backend shared libraries to a directory referenced by `ICICLE_BACKEND_INSTALL_DIR` (defaults to `/opt/icicle/lib/backend`). Only the runtime `.so` files are needed at execution time; we ship the static core libraries in-tree.
-3. Build via `cargo build -p prover-service`. The script will rebuild Icicle the first time (or whenever the sources change) before Meson compiles Rapidsnark.
+3. Build via `cargo build -p prover-service`. The script will rebuild Icicle the first time (or whenever the sources change) before Meson compiles Rapidsnark. If Meson cannot find `nasm`, run `./scripts/compile_prover.sh`, which wires the assembler path into `native-env.ini` and triggers the same build.
 4. Run the prover as before (e.g. using `run_prover.sh` or `cargo run`). If the logs indicate the GPU backend could not be initialized the prover still works, but purely on CPU.
 
 ## Operational Notes
