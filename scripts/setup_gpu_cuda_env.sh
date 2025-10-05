@@ -323,13 +323,7 @@ if [[ $SKIP_BACKEND -eq 0 ]]; then
     exit 1
   fi
   backend_dir="$ICICLE_PREFIX/lib/backend"
-  backend_present=0
-  if [[ -d "$backend_dir" ]]; then
-    if find "$backend_dir" -maxdepth 1 -type f \( -name "*.so" -o -name "*.dylib" -o -name "*.dll" \) | grep -q .; then
-      backend_present=1
-    fi
-  fi
-  if [[ $backend_present -eq 1 ]] && [[ $ICICLE_FORCE -ne 1 ]]; then
+  if [[ -d "$backend_dir" ]] && [[ $ICICLE_FORCE -ne 1 ]]; then
     log "Icicle backend already present at $backend_dir; skipping download"
   else
     log "Installing Icicle backend (${ICICLE_VERSION}/${ICICLE_DISTRO}/${ICICLE_FLAVOR}) into $ICICLE_PREFIX"
