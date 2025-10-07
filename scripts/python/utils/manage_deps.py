@@ -5,6 +5,7 @@ import utils
 import platform
 import shutil
 import os
+from collections import OrderedDict
 
 def install_nvm():
     """Install NVM (Node Version Manager)."""
@@ -18,6 +19,15 @@ def install_node():
     eprint("Installation of node succeeded")
 
 def install_circom():
+    if shutil.which("circom"):
+        try:
+            existing_version = subprocess.check_output(["circom", "--version"], text=True).strip()
+        except Exception:
+            existing_version = None
+        if existing_version:
+            eprint(f"circom already installed ({existing_version}); skipping")
+            return
+
     eprint("Installing circom")
     # de2212a7aa6a070c636cc73382a3deba8c658ad5 fixes a bug related to tag propagation
     # TODO: replace to v2.2.3 once released (because v2.2.2 has a bug related to tags, which we want to use)
@@ -84,46 +94,91 @@ def platform_package_manager():
     return "brew"
 
 
-def run_platform_package_manager_command(package):
-    package_manager = platform_package_manager()
+_apt_pending_packages = OrderedDict()
+_apt_installed_packages = set()
+
+
+def _queue_apt_package(dep_name, package):
+    if package in _apt_installed_packages:
+        return False
+    if package not in _apt_pending_packages:
+        _apt_pending_packages[package] = []
+    if dep_name is not None and dep_name not in _apt_pending_packages[package]:
+        _apt_pending_packages[package].append(dep_name)
+    return True
+
+
+def flush_apt_queue():
+    if not _apt_pending_packages:
+        return
+    packages = list(_apt_pending_packages.keys())
+    try:
+        utils.run_shell_command("apt-get update", as_root=True)
+        utils.run_shell_command("apt-get install -y " + " ".join(packages), as_root=True)
+    except Exception as e:
+        eprint("Installing " + ", ".join(packages) + " failed. Exception: ")
+        eprint(e)
+        eprint("Exiting.")
+        exit(2)
+    for package, deps in _apt_pending_packages.items():
+        _apt_installed_packages.add(package)
+        for dep in deps:
+            eprint("Done installing " + dep)
+    _apt_pending_packages.clear()
+
+
+def run_platform_package_manager_command(package, package_manager=None, dep_name=None):
+    if package_manager is None:
+        package_manager = platform_package_manager()
     try:
         if package_manager == "brew":
             utils.run_shell_command("brew install " + package)
+            return "installed"
         elif package_manager == "pacman":
             utils.run_shell_command("pacman -S --needed --noconfirm " + package, as_root=True)
+            return "installed"
         elif package_manager == "apt-get":
-            utils.run_shell_command("apt-get update", as_root=True)
-            utils.run_shell_command("apt-get install -y " + package, as_root=True)
+            queued = _queue_apt_package(dep_name or package, package)
+            return "deferred" if queued else "already_installed"
     except Exception as e:
         eprint("Installing " + package + " failed. Exception: ")
         eprint(e)
         eprint("Exiting.")
         exit(2)
+    return "installed"
 
 
 def install_using_package_manager(name, package):
-    eprint("Installing " + name)
+    package_manager = platform_package_manager()
 
-    # package is either ...
-    if type(package) is str:
-        # ... a string, which means the package name is consistent across
-        # all supported platforms, or ...
-        run_platform_package_manager_command(package)
-    elif type(package) is dict:
-        # ... a dict, which specifies a platform-specific package name.
-        if platform_package_manager() not in package:
-            eprint("Don't know a way to install package " + package + " on the current distribution.")
+    if isinstance(package, str):
+        package_name = package
+    elif isinstance(package, dict):
+        if package_manager not in package:
+            eprint("Don't know a way to install package " + name + " on the current distribution.")
             exit(2)
-        platform_specific_package = package[platform_package_manager()]
-        if platform_specific_package is None:
-            # Sometimes a specific platform doesn't need to install the package, 
-            # e.g. if it is already installed by default on this platform. We 
-            # represent this by specifying None for this platform.
+        package_name = package[package_manager]
+        if package_name is None:
             eprint("The current system doesn't need to install " + name + ".")
-        else:
-            run_platform_package_manager_command(platform_specific_package)
+            eprint("Done installing " + name)
+            return
+    else:
+        eprint("Dependency descriptor for " + name + " is invalid.")
+        exit(2)
 
-    eprint("Done installing " + name)
+    if package_manager == "apt-get" and package_name in _apt_installed_packages:
+        eprint(name + " already satisfied via apt-get.")
+        eprint("Done installing " + name)
+        return
+
+    eprint("Installing " + name)
+    result = run_platform_package_manager_command(package_name, package_manager, dep_name=name)
+
+    if package_manager == "apt-get":
+        if result == "already_installed":
+            eprint("Done installing " + name)
+    else:
+        eprint("Done installing " + name)
 
 
 # This dict defines the installation behavior for each dependency.
@@ -185,6 +240,7 @@ def install_dep(dep):
     # deps_by_platform[dep] is either ...
     if callable(handler):
         # ... a function, which means calling it should install the dep ...
+        flush_apt_queue()
         handler()
     else:
         # ... or is a string or dict specifying a name that the system package
@@ -196,3 +252,4 @@ def install_dep(dep):
 def install_deps(deps):
     for dep in deps:
         install_dep(dep)
+    flush_apt_queue()

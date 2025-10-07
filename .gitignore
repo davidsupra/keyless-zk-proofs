@@ -17,5 +17,7 @@ rust-rapidsnark/rapidsnark/subprojects/packagecache
 .DS_Store
 *.r1cs
 main_constraints.json
+*.log
 
 .node_modules/
+miniconda.sh

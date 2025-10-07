@@ -24,6 +24,7 @@ Options:
   --backend-version TAG     Icicle release tag (default: latest)
   --backend-distro NAME     Icicle backend distro suffix (default: ubuntu22)
   --backend-flavor NAME     Icicle backend flavor suffix (default: cuda122)
+  --python-provider NAME    Python install strategy: auto (default), apt, or conda
   --backend-force           Overwrite any existing backend install at the target prefix
   --skip-backend            Skip backend download/installation
   --skip-submodules         Skip git submodule update
@@ -51,6 +52,8 @@ SKIP_SUBMODULES=0
 SKIP_CIRCUIT_SETUP=0
 SKIP_CARGO_BUILD=0
 CUSTOM_RESOURCES_DIR=""
+PYTHON_PROVIDER="auto"
+RESOLVED_PYTHON_CMD=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -72,6 +75,19 @@ while [[ $# -gt 0 ]]; do
     --backend-flavor)
       [[ $# -ge 2 ]] || { err "--backend-flavor requires a value"; exit 1; }
       ICICLE_FLAVOR="$2"
+      shift 2
+      ;;
+    --python-provider)
+      [[ $# -ge 2 ]] || { err "--python-provider requires a value"; exit 1; }
+      case "$2" in
+        auto|apt|conda)
+          PYTHON_PROVIDER="$2"
+          ;;
+        *)
+          err "Unsupported python provider '$2'. Expected one of: auto, apt, conda."
+          exit 1
+          ;;
+      esac
       shift 2
       ;;
     --backend-force)
@@ -171,6 +187,32 @@ load_nvm() {
     export NVM_DIR="$nvm_dir"
     # shellcheck disable=SC1090
     . "$nvm_sh"
+    if command -v nvm >/dev/null 2>&1; then
+      local target_version=""
+      target_version=$(nvm version default 2>/dev/null || true)
+      if [[ -z "$target_version" || "$target_version" == "N/A" ]]; then
+        target_version=$(nvm version node 2>/dev/null || true)
+      fi
+      if [[ -n "$target_version" && "$target_version" != "N/A" ]]; then
+        nvm use "$target_version" >/dev/null 2>&1 || true
+      else
+        nvm use node >/dev/null 2>&1 || true
+      fi
+      local active_version=""
+      active_version=$(nvm current 2>/dev/null || true)
+      log "nvm active version after load: ${active_version:-<none>}"
+      if [[ -n "$active_version" && "$active_version" != "none" && "$active_version" != "system" ]]; then
+        local node_path=""
+        node_path=$(nvm which "$active_version" 2>/dev/null || true)
+        if [[ -n "$node_path" && "$node_path" != "N/A" ]]; then
+          local node_dir
+          node_dir=$(dirname "$node_path")
+          if [[ -d "$node_dir" ]]; then
+            export PATH="$node_dir:$PATH"
+          fi
+        fi
+      fi
+    fi
   else
     warn "nvm not found at $nvm_sh. npm-based commands may fail."
   fi
@@ -222,6 +264,17 @@ fi
 run_manage_deps "circuit" "${circuit_deps[@]}"
 
 load_nvm
+
+# ensure_poetry fetches Poetry under ~/.local/bin when absent. In
+# containerized shells that PATH entry may be missing on reruns, which would
+# trigger a redundant reinstall. Export it before invoking ensure_poetry so
+# the existing binary is detected.
+if [[ -d "$HOME/.local/bin" ]]; then
+  case ":$PATH:" in
+    *:$(printf '%s' "$HOME/.local/bin"):* ) ;;
+    *) export PATH="$HOME/.local/bin:$PATH" ;;
+  esac
+fi
 
 ensure_poetry
 
@@ -276,28 +329,135 @@ install_python_via_apt() {
   "${apt_cmd[@]}" install -y python3.11 python3.11-venv python3.11-distutils
 }
 
-resolve_poetry_python() {
-  local selected
-  selected=$(select_poetry_python || true)
-  if [[ -n "$selected" ]]; then
-    printf '%s\n' "$selected"
+install_python_via_conda() {
+  local conda_dir="${HOME}/miniconda3"
+  local conda_bin="$conda_dir/bin/conda"
+  local python_env_path="$conda_dir/envs/keyless-poetry"
+
+  if [[ ! -x "$conda_bin" ]]; then
+    local system
+    local arch
+    system=$(uname -s)
+    arch=$(uname -m)
+    local installer=""
+    case "${system}_${arch}" in
+      Linux_x86_64)
+        installer="Miniconda3-latest-Linux-x86_64.sh"
+        ;;
+      Linux_aarch64|Linux_arm64)
+        installer="Miniconda3-latest-Linux-aarch64.sh"
+        ;;
+      Darwin_x86_64)
+        installer="Miniconda3-latest-MacOSX-x86_64.sh"
+        ;;
+      Darwin_arm64)
+        installer="Miniconda3-latest-MacOSX-arm64.sh"
+        ;;
+      *)
+        warn "Unsupported platform ${system}/${arch} for Miniconda bootstrap."
+        return 1
+        ;;
+    esac
+    local installer_url="https://repo.anaconda.com/miniconda/${installer}"
+    log "Downloading Miniconda installer (${installer})"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    trap 'rm -rf "$tmpdir"' RETURN
+    if ! curl -fsSL "$installer_url" -o "${tmpdir}/${installer}"; then
+      warn "Failed to download Miniconda installer from $installer_url"
+      return 1
+    fi
+    log "Installing Miniconda into ${conda_dir}"
+    bash "${tmpdir}/${installer}" -b -p "$conda_dir"
+    rm -rf "$tmpdir"
+    trap - RETURN
+    if [[ ! -x "$conda_bin" ]]; then
+      warn "Miniconda install did not produce ${conda_bin}"
+      return 1
+    fi
+  fi
+
+  log "Accepting Miniconda terms of service for automated use"
+  "$conda_bin" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main >/dev/null 2>&1 || true
+  "$conda_bin" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r >/dev/null 2>&1 || true
+
+  if [[ ! -x "$python_env_path/bin/python" ]]; then
+    log "Creating Python 3.11 environment via conda at ${python_env_path}"
+    if ! "$conda_bin" create -y -p "$python_env_path" python=3.11 >/dev/null 2>&1; then
+      warn "Conda environment creation failed. Check conda configuration."
+      return 1
+    fi
+  fi
+
+  if [[ -x "$python_env_path/bin/python" ]]; then
+    export POETRY_PYTHON="$python_env_path/bin/python"
+    log "Prepared conda-managed python at ${POETRY_PYTHON}"
     return 0
   fi
-  if install_python_via_apt; then
-    selected=$(select_poetry_python || true)
-    if [[ -n "$selected" ]]; then
-      printf '%s\n' "$selected"
-      return 0
-    fi
-  else
-    if command -v apt-get >/dev/null 2>&1; then
-      warn "Automatic installation of Python 3.11 via apt-get failed."
-    fi
-  fi
+
+  warn "Conda environment did not produce a usable python interpreter."
   return 1
 }
 
-POETRY_PYTHON_CMD=$(resolve_poetry_python || true)
+resolve_poetry_python() {
+  local selected
+  RESOLVED_PYTHON_CMD=""
+  selected=$(select_poetry_python || true)
+  if [[ -n "$selected" ]]; then
+    RESOLVED_PYTHON_CMD="$selected"
+    return 0
+  fi
+
+  local providers=()
+  case "$PYTHON_PROVIDER" in
+    apt)
+      providers=(apt)
+      ;;
+    conda)
+      providers=(conda)
+      ;;
+    auto)
+      providers=(apt conda)
+      ;;
+  esac
+
+  local provider
+  for provider in "${providers[@]}"; do
+    case "$provider" in
+      apt)
+        if install_python_via_apt; then
+          selected=$(select_poetry_python || true)
+          if [[ -n "$selected" ]]; then
+            RESOLVED_PYTHON_CMD="$selected"
+            return 0
+          fi
+        else
+          if command -v apt-get >/dev/null 2>&1; then
+            warn "Automatic installation of Python 3.11 via apt-get failed."
+          fi
+        fi
+        ;;
+      conda)
+        if install_python_via_conda; then
+          selected=$(select_poetry_python || true)
+          if [[ -n "$selected" ]]; then
+            RESOLVED_PYTHON_CMD="$selected"
+            return 0
+          fi
+        else
+          warn "Automatic installation of Python 3.11 via conda failed."
+        fi
+        ;;
+    esac
+  done
+  RESOLVED_PYTHON_CMD=""
+  return 1
+}
+
+if ! resolve_poetry_python; then
+  true
+fi
+POETRY_PYTHON_CMD="$RESOLVED_PYTHON_CMD"
 if [[ -z "$POETRY_PYTHON_CMD" ]]; then
   err "Python 3.11+ is required for poetry (project targets ^3.11). Install python3.11 manually or set POETRY_PYTHON before running."
   exit 1
