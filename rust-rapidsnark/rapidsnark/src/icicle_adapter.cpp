@@ -85,8 +85,8 @@ bool ensure_domain(uint32_t logn)
     }
 
     Scalar primitive_root = Scalar::omega(logn);
-    auto init_cfg = icicle::default_ntt_init_domain_config();
-    auto status   = icicle::ntt_init_domain(primitive_root, init_cfg);
+    auto init_cfg = default_ntt_init_domain_config();
+    auto status   = ntt_init_domain(primitive_root, init_cfg);
     if (status != eIcicleError::SUCCESS) {
         return false;
     }
@@ -154,7 +154,7 @@ bool msm_g1(const AltBn128::G1PointAffine* bases,
         copy_fq_to_icicle(bases[i].y, base_buffer[i].y);
     }
 
-    auto config = icicle::default_msm_config();
+    auto config = default_msm_config();
     config.batch_size                 = 1;
     config.are_points_shared_in_batch = true;
     config.are_scalars_on_device      = false;
@@ -166,7 +166,7 @@ bool msm_g1(const AltBn128::G1PointAffine* bases,
     config.bitsize = 254;
 
     G1Projective result;
-    auto status = icicle::msm<Scalar, G1Affine, G1Projective>(
+    auto status = msm<Scalar, G1Affine, G1Projective>(
         scalar_buffer.data(), base_buffer.data(), static_cast<int>(n), config, &result);
 
     if (status != eIcicleError::SUCCESS) {
@@ -215,7 +215,7 @@ bool msm_g2(const AltBn128::G2PointAffine* bases,
         copy_f2_to_icicle(bases[i].y, base_buffer[i].y);
     }
 
-    auto config = icicle::default_msm_config();
+    auto config = default_msm_config();
     config.batch_size                 = 1;
     config.are_points_shared_in_batch = true;
     config.are_scalars_on_device      = false;
@@ -227,7 +227,7 @@ bool msm_g2(const AltBn128::G2PointAffine* bases,
     config.bitsize = 254;
 
     G2Projective result;
-    auto status = icicle::msm<Scalar, G2Affine, G2Projective>(
+    auto status = msm<Scalar, G2Affine, G2Projective>(
         scalar_buffer.data(), base_buffer.data(), static_cast<int>(n), config, &result);
 
     if (status != eIcicleError::SUCCESS) {
@@ -270,14 +270,14 @@ bool ntt_forward(AltBn128::FrElement* data, uint64_t size)
         copy_scalar_to_icicle(data[i], buffer[i]);
     }
 
-    auto config = icicle::default_ntt_config<Scalar>();
+    auto config = default_ntt_config<Scalar>();
     config.batch_size            = 1;
     config.are_inputs_on_device  = false;
     config.are_outputs_on_device = false;
     config.is_async              = false;
-    config.ordering              = icicle::Ordering::kNN;
+    config.ordering              = Ordering::kNN;
 
-    auto status = icicle::ntt(buffer.data(), static_cast<int>(size), icicle::NTTDir::kForward, config, buffer.data());
+    auto status = ntt(buffer.data(), static_cast<int>(size), NTTDir::kForward, config, buffer.data());
     if (status != eIcicleError::SUCCESS) {
         return false;
     }
@@ -309,14 +309,14 @@ bool ntt_inverse(AltBn128::FrElement* data, uint64_t size)
         copy_scalar_to_icicle(data[i], buffer[i]);
     }
 
-    auto config = icicle::default_ntt_config<Scalar>();
+    auto config = default_ntt_config<Scalar>();
     config.batch_size            = 1;
     config.are_inputs_on_device  = false;
     config.are_outputs_on_device = false;
     config.is_async              = false;
-    config.ordering              = icicle::Ordering::kNN;
+    config.ordering              = Ordering::kNN;
 
-    auto status = icicle::ntt(buffer.data(), static_cast<int>(size), icicle::NTTDir::kInverse, config, buffer.data());
+    auto status = ntt(buffer.data(), static_cast<int>(size), NTTDir::kInverse, config, buffer.data());
     if (status != eIcicleError::SUCCESS) {
         return false;
     }

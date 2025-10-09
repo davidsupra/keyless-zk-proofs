@@ -17,9 +17,13 @@ add_project_arguments('-DUSE_ICICLE_GPU', language : 'cpp')
 project_includes = include_directories('src')
 icicle_includes = include_directories('../../third_party/icicle/icicle/include')
 
-# If we are on x86-64, need nasm 
+# If we are on x86-64, prefer nasm if supported
+use_asm = false
 if build_machine.cpu_family() == 'x86_64'
-  add_languages('nasm')
+  use_asm = add_languages('nasm', required : false)
+  if not use_asm
+    warning('NASM support unavailable; falling back to portable implementations.')
+  endif
 endif
 
 
@@ -122,7 +126,7 @@ if build_machine.system() == 'darwin' and build_machine.cpu_family() == 'aarch64
   add_project_arguments('-D_LONG_LONG_LIMB', language : 'cpp')
 endif
 
-if build_machine.cpu_family() == 'x86_64'
+if use_asm
   # fr.hpp and fq.hpp need these flags to choose the 
   # right fn signatures
   add_project_arguments('-DARCH_X86_64', language : 'cpp')

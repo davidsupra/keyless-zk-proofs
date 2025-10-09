@@ -8,6 +8,7 @@ ICICLE_DIR="${REPO_ROOT}/third_party/icicle"
 ICICLE_BUILD_DIR="${ICICLE_DIR}/build"
 
 echo "[build_lib] Building icicle libraries"
+rm -rf "${ICICLE_BUILD_DIR}"
 cmake -S "${ICICLE_DIR}/icicle" -B "${ICICLE_BUILD_DIR}" \
   -DCURVE=bn254 \
   -DICICLE_STATIC_LINK=ON \
@@ -16,7 +17,10 @@ cmake -S "${ICICLE_DIR}/icicle" -B "${ICICLE_BUILD_DIR}" \
 cmake --build "${ICICLE_BUILD_DIR}" --target icicle_curve icicle_field icicle_device -j
 
 echo "[build_lib] Building rapidsnark library"
-rm -rf "${SCRIPT_DIR}/build"
-meson setup --native-file=native-env.ini build
-cd build
-meson compile
+(
+  cd "${SCRIPT_DIR}"
+  rm -rf build
+  meson setup --native-file=native-env.ini build .
+  cd build
+  meson compile
+)

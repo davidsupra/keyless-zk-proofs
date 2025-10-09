@@ -13,8 +13,14 @@ perform_circuit_setup() {
   (cd "$repo_root/circuit" && "${circom_cmd[@]}")
 
   if [[ -d "$repo_root/circuit/main_c_cpp" ]]; then
-    log "Building C witness generator"
-    (cd "$repo_root/circuit/main_c_cpp" && make)
+    local arch
+    arch=$(uname -m 2>/dev/null || echo unknown)
+    if [[ "$arch" == "x86_64" || "$arch" == "amd64" ]]; then
+      log "Building C witness generator"
+      (cd "$repo_root/circuit/main_c_cpp" && make)
+    else
+      warn "Skipping C witness generator build on unsupported architecture '$arch'"
+    fi
   fi
 
   if [[ -n "$custom_resources_dir" ]]; then

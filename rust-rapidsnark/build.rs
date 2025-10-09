@@ -11,14 +11,19 @@ fn main() {
             .expect("couldn't convert pathbuf to str.")
     );
 
-    println!(
-        "{:?}",
-        Command::new("bash")
+    let output = Command::new("bash")
             .arg("-c")
             .arg("cd rapidsnark && ./build_lib.sh")
             .output()
-            .expect("Failed to build c++ library")
-    );
+            .expect("Failed to spawn build_lib.sh");
+    if !output.status.success() {
+        panic!(
+            "Building rapidsnark C++ library failed (status {}):\nstdout:\n{}\nstderr:\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 
     // Tell cargo to tell rustc to link the system `clang`
     // shared library.

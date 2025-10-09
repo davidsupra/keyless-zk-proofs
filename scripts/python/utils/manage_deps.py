@@ -15,7 +15,12 @@ def install_node():
     """Install nvm, and then use it to install nodejs."""
     eprint("Installing node")
     install_nvm()
-    utils.run_shell_command(". ~/.nvm/nvm.sh; nvm install node")
+    nvm_dir = os.environ.get("NVM_DIR", os.path.expanduser("~/.nvm"))
+    utils.run_shell_command(
+        "bash -lc 'export NVM_DIR=\"{nvm_dir}\"; "
+        "[ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; "
+        "nvm install node'".format(nvm_dir=nvm_dir)
+    )
     eprint("Installation of node succeeded")
 
 def install_circom():
@@ -70,7 +75,15 @@ def add_cargo_to_path():
         os.environ['PATH'] += ":" + os.path.expanduser("~/.cargo/bin")
 
 def install_npm_package(package):
-    utils.run_shell_command(". ~/.nvm/nvm.sh; npm install -g " + package)
+    nvm_dir = os.environ.get("NVM_DIR", os.path.expanduser("~/.nvm"))
+    utils.run_shell_command(
+        "bash -lc 'export NVM_DIR=\"{nvm_dir}\"; "
+        "[ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; "
+        "npm install -g {package}'".format(
+            nvm_dir=nvm_dir,
+            package=package.replace("'", "'\"'\"'")
+        )
+    )
 
 def platform_package_manager():
     if platform.system() == 'Linux':
