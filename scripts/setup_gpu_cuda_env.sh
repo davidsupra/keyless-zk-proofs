@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-log() {
-  printf '[setup] %s\n' "$*"
-}
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
 
-warn() {
-  printf '[setup][warn] %s\n' "$*" >&2
-}
-
-err() {
-  printf '[setup][error] %s\n' "$*" >&2
-}
+# shellcheck source=lib/setup_common.sh
+. "${SCRIPT_DIR}/lib/setup_common.sh"
+# shellcheck source=lib/setup_node.sh
+. "${SCRIPT_DIR}/lib/setup_node.sh"
+# shellcheck source=lib/setup_python_env.sh
+. "${SCRIPT_DIR}/lib/setup_python_env.sh"
+# shellcheck source=lib/setup_backend.sh
+. "${SCRIPT_DIR}/lib/setup_backend.sh"
+# shellcheck source=lib/setup_circuit.sh
+. "${SCRIPT_DIR}/lib/setup_circuit.sh"
 
 usage() {
   cat <<'USAGE'
@@ -38,9 +40,6 @@ Examples:
   ./scripts/setup_gpu_cuda_env.sh --backend-prefix /opt/icicle --backend-version v4.0.0
 USAGE
 }
-
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-REPO_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
 
 ICICLE_PREFIX="/opt/icicle"
 ICICLE_VERSION="latest"
@@ -129,95 +128,6 @@ done
 
 export PATH="$HOME/.local/bin:$PATH"
 
-require_cmd() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    err "Required command '$1' not found in PATH. Please install it and re-run."
-    exit 1
-  fi
-}
-
-run_manage_deps() {
-  local label="$1"
-  shift
-  local deps=("$@")
-  if [[ ${#deps[@]} -eq 0 ]]; then
-    return
-  fi
-  log "Installing ${label} dependencies: ${deps[*]}"
-  DEP_LIST="${deps[*]}" REPO_ROOT="$REPO_ROOT" python3 - <<'PY'
-import os
-import sys
-repo_root = os.environ["REPO_ROOT"]
-sys.path.insert(0, os.path.join(repo_root, "scripts", "python"))
-from utils import manage_deps
-deps = os.environ["DEP_LIST"].split()
-if deps:
-    manage_deps.install_deps(deps)
-PY
-}
-
-ensure_poetry() {
-  if command -v poetry >/dev/null 2>&1; then
-    return
-  fi
-  log "Poetry not detected. Installing..."
-  if command -v pipx >/dev/null 2>&1; then
-    pipx install poetry
-  else
-    if ! command -v curl >/dev/null 2>&1; then
-      err "curl is required to bootstrap poetry."
-      exit 1
-    fi
-    curl -sSL https://install.python-poetry.org | python3 -
-  fi
-  if ! command -v poetry >/dev/null 2>&1; then
-    warn "Poetry installation completed but binary not on PATH. Exporting ~/.local/bin."
-    export PATH="$HOME/.local/bin:$PATH"
-    if ! command -v poetry >/dev/null 2>&1; then
-      err "Poetry is still not available on PATH after installation."
-      exit 1
-    fi
-  fi
-}
-
-load_nvm() {
-  local nvm_dir="${NVM_DIR:-$HOME/.nvm}"
-  local nvm_sh="$nvm_dir/nvm.sh"
-  if [[ -s "$nvm_sh" ]]; then
-    export NVM_DIR="$nvm_dir"
-    # shellcheck disable=SC1090
-    . "$nvm_sh"
-    if command -v nvm >/dev/null 2>&1; then
-      local target_version=""
-      target_version=$(nvm version default 2>/dev/null || true)
-      if [[ -z "$target_version" || "$target_version" == "N/A" ]]; then
-        target_version=$(nvm version node 2>/dev/null || true)
-      fi
-      if [[ -n "$target_version" && "$target_version" != "N/A" ]]; then
-        nvm use "$target_version" >/dev/null 2>&1 || true
-      else
-        nvm use node >/dev/null 2>&1 || true
-      fi
-      local active_version=""
-      active_version=$(nvm current 2>/dev/null || true)
-      log "nvm active version after load: ${active_version:-<none>}"
-      if [[ -n "$active_version" && "$active_version" != "none" && "$active_version" != "system" ]]; then
-        local node_path=""
-        node_path=$(nvm which "$active_version" 2>/dev/null || true)
-        if [[ -n "$node_path" && "$node_path" != "N/A" ]]; then
-          local node_dir
-          node_dir=$(dirname "$node_path")
-          if [[ -d "$node_dir" ]]; then
-            export PATH="$node_dir:$PATH"
-          fi
-        fi
-      fi
-    fi
-  else
-    warn "nvm not found at $nvm_sh. npm-based commands may fail."
-  fi
-}
-
 require_cmd git
 require_cmd python3
 require_cmd curl
@@ -278,182 +188,6 @@ fi
 
 ensure_poetry
 
-select_poetry_python() {
-  local candidates=()
-  if [[ -n "${POETRY_PYTHON:-}" ]]; then
-    candidates+=("$POETRY_PYTHON")
-  fi
-  candidates+=(python3.12 python3.11 python3)
-  for candidate in "${candidates[@]}"; do
-    if command -v "$candidate" >/dev/null 2>&1; then
-      if "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)'; then
-        command -v "$candidate"
-        return 0
-      fi
-    fi
-  done
-  return 1
-}
-
-install_python_via_apt() {
-  if [[ $EUID -ne 0 ]] && ! command -v sudo >/dev/null 2>&1; then
-    warn "Need root privileges or sudo access to install Python via apt-get."
-    return 1
-  fi
-  if ! command -v apt-get >/dev/null 2>&1; then
-    return 1
-  fi
-  log "Attempting to install Python 3.11 via apt-get"
-  local apt_cmd=(apt-get)
-  if [[ $EUID -ne 0 ]]; then
-    apt_cmd=(sudo apt-get)
-  fi
-  "${apt_cmd[@]}" update
-  if "${apt_cmd[@]}" install -y python3.11 python3.11-venv python3.11-distutils; then
-    return 0
-  fi
-  warn "Direct apt install of python3.11 failed; trying deadsnakes PPA"
-  if ! command -v add-apt-repository >/dev/null 2>&1; then
-    "${apt_cmd[@]}" install -y software-properties-common
-  fi
-  local add_repo_cmd=(add-apt-repository)
-  if [[ $EUID -ne 0 ]]; then
-    add_repo_cmd=(sudo add-apt-repository)
-  fi
-  if ! command -v add-apt-repository >/dev/null 2>&1; then
-    warn "add-apt-repository not available; cannot add deadsnakes PPA automatically."
-    return 1
-  fi
-  "${add_repo_cmd[@]}" -y ppa:deadsnakes/ppa
-  "${apt_cmd[@]}" update
-  "${apt_cmd[@]}" install -y python3.11 python3.11-venv python3.11-distutils
-}
-
-install_python_via_conda() {
-  local conda_dir="${HOME}/miniconda3"
-  local conda_bin="$conda_dir/bin/conda"
-  local python_env_path="$conda_dir/envs/keyless-poetry"
-
-  if [[ ! -x "$conda_bin" ]]; then
-    local system
-    local arch
-    system=$(uname -s)
-    arch=$(uname -m)
-    local installer=""
-    case "${system}_${arch}" in
-      Linux_x86_64)
-        installer="Miniconda3-latest-Linux-x86_64.sh"
-        ;;
-      Linux_aarch64|Linux_arm64)
-        installer="Miniconda3-latest-Linux-aarch64.sh"
-        ;;
-      Darwin_x86_64)
-        installer="Miniconda3-latest-MacOSX-x86_64.sh"
-        ;;
-      Darwin_arm64)
-        installer="Miniconda3-latest-MacOSX-arm64.sh"
-        ;;
-      *)
-        warn "Unsupported platform ${system}/${arch} for Miniconda bootstrap."
-        return 1
-        ;;
-    esac
-    local installer_url="https://repo.anaconda.com/miniconda/${installer}"
-    log "Downloading Miniconda installer (${installer})"
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    trap 'rm -rf "$tmpdir"' RETURN
-    if ! curl -fsSL "$installer_url" -o "${tmpdir}/${installer}"; then
-      warn "Failed to download Miniconda installer from $installer_url"
-      return 1
-    fi
-    log "Installing Miniconda into ${conda_dir}"
-    bash "${tmpdir}/${installer}" -b -p "$conda_dir"
-    rm -rf "$tmpdir"
-    trap - RETURN
-    if [[ ! -x "$conda_bin" ]]; then
-      warn "Miniconda install did not produce ${conda_bin}"
-      return 1
-    fi
-  fi
-
-  log "Accepting Miniconda terms of service for automated use"
-  "$conda_bin" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main >/dev/null 2>&1 || true
-  "$conda_bin" tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r >/dev/null 2>&1 || true
-
-  if [[ ! -x "$python_env_path/bin/python" ]]; then
-    log "Creating Python 3.11 environment via conda at ${python_env_path}"
-    if ! "$conda_bin" create -y -p "$python_env_path" python=3.11 >/dev/null 2>&1; then
-      warn "Conda environment creation failed. Check conda configuration."
-      return 1
-    fi
-  fi
-
-  if [[ -x "$python_env_path/bin/python" ]]; then
-    export POETRY_PYTHON="$python_env_path/bin/python"
-    log "Prepared conda-managed python at ${POETRY_PYTHON}"
-    return 0
-  fi
-
-  warn "Conda environment did not produce a usable python interpreter."
-  return 1
-}
-
-resolve_poetry_python() {
-  local selected
-  RESOLVED_PYTHON_CMD=""
-  selected=$(select_poetry_python || true)
-  if [[ -n "$selected" ]]; then
-    RESOLVED_PYTHON_CMD="$selected"
-    return 0
-  fi
-
-  local providers=()
-  case "$PYTHON_PROVIDER" in
-    apt)
-      providers=(apt)
-      ;;
-    conda)
-      providers=(conda)
-      ;;
-    auto)
-      providers=(apt conda)
-      ;;
-  esac
-
-  local provider
-  for provider in "${providers[@]}"; do
-    case "$provider" in
-      apt)
-        if install_python_via_apt; then
-          selected=$(select_poetry_python || true)
-          if [[ -n "$selected" ]]; then
-            RESOLVED_PYTHON_CMD="$selected"
-            return 0
-          fi
-        else
-          if command -v apt-get >/dev/null 2>&1; then
-            warn "Automatic installation of Python 3.11 via apt-get failed."
-          fi
-        fi
-        ;;
-      conda)
-        if install_python_via_conda; then
-          selected=$(select_poetry_python || true)
-          if [[ -n "$selected" ]]; then
-            RESOLVED_PYTHON_CMD="$selected"
-            return 0
-          fi
-        else
-          warn "Automatic installation of Python 3.11 via conda failed."
-        fi
-        ;;
-    esac
-  done
-  RESOLVED_PYTHON_CMD=""
-  return 1
-}
-
 if ! resolve_poetry_python; then
   true
 fi
@@ -473,42 +207,7 @@ log "Adding prover-service env vars to shell profile"
 ./scripts/task.sh prover-service add-envvars-to-profile
 
 if [[ $SKIP_BACKEND -eq 0 ]]; then
-  INSTALL_ARGS=("--prefix" "$ICICLE_PREFIX" "--version" "$ICICLE_VERSION" "--distro" "$ICICLE_DISTRO" "--flavor" "$ICICLE_FLAVOR")
-  if [[ $ICICLE_FORCE -eq 1 ]]; then
-    INSTALL_ARGS+=("--force")
-  fi
-  backend_script="$REPO_ROOT/scripts/install_icicle_backend.sh"
-  if [[ ! -x "$backend_script" ]]; then
-    err "Backend installer script not found at $backend_script"
-    exit 1
-  fi
-  backend_dir="$ICICLE_PREFIX/lib/backend"
-  if [[ -d "$backend_dir" ]] && [[ $ICICLE_FORCE -ne 1 ]]; then
-    log "Icicle backend already present at $backend_dir; skipping download"
-  else
-    log "Installing Icicle backend (${ICICLE_VERSION}/${ICICLE_DISTRO}/${ICICLE_FLAVOR}) into $ICICLE_PREFIX"
-    if [[ -w "$ICICLE_PREFIX" ]]; then
-      bash "$backend_script" "${INSTALL_ARGS[@]}"
-    elif [[ ! -e "$ICICLE_PREFIX" ]] && [[ -w "$(dirname "$ICICLE_PREFIX")" ]]; then
-      bash "$backend_script" "${INSTALL_ARGS[@]}"
-    elif command -v sudo >/dev/null 2>&1; then
-      sudo bash "$backend_script" "${INSTALL_ARGS[@]}"
-    else
-      err "Cannot write to $ICICLE_PREFIX and sudo is unavailable."
-      exit 1
-    fi
-  fi
-  export ICICLE_BACKEND_INSTALL_DIR="$backend_dir"
-  log "Exporting ICICLE_BACKEND_INSTALL_DIR=$ICICLE_BACKEND_INSTALL_DIR for current session"
-  REPO_ROOT="$REPO_ROOT" ICICLE_BACKEND_INSTALL_DIR="$ICICLE_BACKEND_INSTALL_DIR" python3 - <<'PY'
-import os
-import sys
-repo_root = os.environ["REPO_ROOT"]
-sys.path.insert(0, os.path.join(repo_root, "scripts", "python"))
-from utils import add_envvar_to_profile
-install_dir = os.environ["ICICLE_BACKEND_INSTALL_DIR"]
-add_envvar_to_profile("ICICLE_BACKEND_INSTALL_DIR", install_dir)
-PY
+  install_icicle_backend "$ICICLE_PREFIX" "$ICICLE_VERSION" "$ICICLE_DISTRO" "$ICICLE_FLAVOR" "$ICICLE_FORCE" "$REPO_ROOT"
 else
   log "Skipping Icicle backend installation"
   if [[ -z "${ICICLE_BACKEND_INSTALL_DIR:-}" ]]; then
@@ -517,24 +216,7 @@ else
 fi
 
 if [[ $SKIP_CIRCUIT_SETUP -eq 0 ]]; then
-  load_nvm
-  log "Installing npm dependencies for circuit"
-  (cd "$REPO_ROOT/circuit" && npm install)
-
-  circom_cmd=(circom --O2 -l templates -l "$(npm root -g)" templates/main.circom --r1cs --wasm --c --sym)
-  log "Compiling main circuit with: ${circom_cmd[*]}"
-  (cd "$REPO_ROOT/circuit" && "${circom_cmd[@]}")
-
-  if [[ -d "$REPO_ROOT/circuit/main_c_cpp" ]]; then
-    log "Building C witness generator"
-    (cd "$REPO_ROOT/circuit/main_c_cpp" && make)
-  fi
-
-  if [[ -n "$CUSTOM_RESOURCES_DIR" ]]; then
-    export RESOURCES_DIR="$CUSTOM_RESOURCES_DIR"
-  fi
-  log "Procuring testing setup (this may take several minutes)"
-  ./scripts/task.sh setup procure-testing-setup || warn "Testing setup procurement failed; rerun if proofs are required."
+  perform_circuit_setup "$REPO_ROOT" "$CUSTOM_RESOURCES_DIR"
 else
   log "Skipping circuit compilation and setup procurement"
 fi
